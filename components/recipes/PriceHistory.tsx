@@ -45,8 +45,8 @@ export function PriceHistory({ history }: PriceHistoryProps) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.header} 
+      <TouchableOpacity
+        style={styles.header}
         onPress={toggleExpand}
         activeOpacity={0.7}
       >
@@ -81,12 +81,12 @@ export function PriceHistory({ history }: PriceHistoryProps) {
                 <Text style={[styles.cell, styles.priceCell, { flex: 1.5 }]}>
                   ₺{record.price.toFixed(2)}
                 </Text>
-                <View style={[styles.cell, styles.changeCell, { flex: 1 }]}>
+                <View style={[styles.changeCell, { flex: 1 }]}>
                   {hasChange && (
                     <>
                       {getTrendIcon(record.price, nextRecord.price)}
                       <Text style={[
-                        styles.changeText, 
+                        styles.changeText,
                         { color: record.price > nextRecord.price ? colors.priceUp : record.price < nextRecord.price ? colors.priceDown : colors.textSecondary }
                       ]}>
                         {changeVal}

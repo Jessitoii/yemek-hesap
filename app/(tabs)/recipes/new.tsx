@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,36 @@ import { spacing, radius, shadow } from '@/constants/theme';
 import { typography } from '@/constants/typography';
 import { RecipeIngredient } from '@/types/recipe';
 import { Card } from '@/components/ui/Card';
+
+const scoreMigrosMatch = (product: any, query: string, unit: string, amount: number) => {
+  let score = 0;
+  const productName = product.name.toLowerCase();
+  const q = query.toLowerCase();
+
+  // 1. İsim Benzerliği
+  if (productName === q) score += 100;
+  else if (productName.includes(q)) score += 50;
+
+  // 2. Birim Uyumu
+  const targetUnitLower = (unit || '').toLowerCase();
+  if (targetUnitLower === 'gram' || targetUnitLower === 'gr' || targetUnitLower === 'kg') {
+    if (productName.includes(' g') || productName.includes(' gr') || productName.includes('kg')) {
+      score += 30;
+    }
+  } else if (targetUnitLower === 'adet' || targetUnitLower === 'tane') {
+    if (productName.includes(' adet') || productName.includes(' tane')) {
+      score += 30;
+    }
+  }
+
+  // 3. Kelime bazlı eşleşme
+  const keywords = q.split(' ');
+  keywords.forEach(kw => {
+    if (kw.length > 2 && productName.includes(kw)) score += 20;
+  });
+
+  return score;
+};
 
 export default function NewRecipeScreen() {
   const router = useRouter();
@@ -95,6 +125,21 @@ export default function NewRecipeScreen() {
       clearDraftingIngredients();
     }
   }, [id, recipes]);
+
+  const summary = useMemo(() => {
+    return draftingIngredients.reduce((acc, ing) => {
+      const detail = allIngredients.find(i => i.id === ing.ingredientId);
+      if (detail) {
+        const ratio = ing.grams / 100;
+        acc.calories += (detail.nutrition?.calories || 0) * ratio;
+        acc.protein += (detail.nutrition?.protein || 0) * ratio;
+        acc.carbs += (detail.nutrition?.carbs || 0) * ratio;
+        acc.fat += (detail.nutrition?.fat || 0) * ratio;
+        acc.cost += (detail.lastKnownPrice || 0) * (ing.grams / (detail.nutrition?.servingSize || 100));
+      }
+      return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0, cost: 0 });
+  }, [draftingIngredients, allIngredients]);
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -184,8 +229,14 @@ export default function NewRecipeScreen() {
           .trim();
 
         // 2. Search Migros for cost/image
+        const { amount, unit } = parseMeasure(raw.measure);
         const migrosMatches = await searchMigrosProducts(nameToSearch);
-        const bestMatch = migrosMatches[0];
+        
+        const scored = migrosMatches
+          .map(p => ({ product: p, score: scoreMigrosMatch(p, nameToSearch, unit, amount) }))
+          .sort((a, b) => b.score - a.score);
+        
+        const bestMatch = scored.length > 0 && scored[0].score > 0 ? scored[0].product : undefined;
 
         // 3. Fetch Nutrition
         const nutrition = await getNutrition([
@@ -214,8 +265,7 @@ export default function NewRecipeScreen() {
           custom: false
         });
 
-        // 5. Parse measure and convert to grams
-        const { amount, unit, requiresManualInput } = parseMeasure(raw.measure);
+        // 5. Convert to grams
         const productGrams = bestMatch ? parseProductGrams(bestMatch.name) : undefined;
         const isKgProduct = bestMatch?.name?.toLowerCase().includes(' kg') ||
           bestMatch?.name?.toLowerCase().endsWith('kg');
@@ -414,30 +464,53 @@ export default function NewRecipeScreen() {
 
             {draftingIngredients.length > 0 ? (
               <View style={styles.ingredientsList}>
-                {draftingIngredients.map((ing) => (
-                  <View key={ing.ingredientId} style={styles.ingredientItem}>
-                    <View style={styles.ingredientInfo}>
-                      <ChefHat size={20} color={colors.textSecondary} />
-                      <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={styles.ingredientName} numberOfLines={1}>{ing.name}</Text>
-                        <Text style={styles.ingredientAmount}>{ing.amount} {ing.unit}</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity onPress={() => handleRemoveIngredient(ing.ingredientId)} style={{ marginLeft: 10 }}>
-                      <Trash size={20} color={colors.error} weight="bold" />
-                    </TouchableOpacity>
-                  </View>
+                {draftingIngredients.map((ing) => {
+                  const detail = allIngredients.find(i => i.id === ing.ingredientId);
+                  const imageUrl = detail?.imageUrl;
+                  const finalUri = imageUrl 
+                    ? (imageUrl.startsWith('//') ? `https:${imageUrl}` : imageUrl)
+                    : null;
 
-                ))}
+                  return (
+                    <View key={ing.ingredientId} style={styles.ingredientItem}>
+                      <View style={styles.ingredientInfo}>
+                        <View style={styles.ingredientImageBox}>
+                          {finalUri ? (
+                            <Image source={{ uri: finalUri }} style={styles.ingredientImage} />
+                          ) : (
+                            <ChefHat size={20} color={colors.textSecondary} />
+                          )}
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={styles.ingredientName} numberOfLines={1}>{ing.name}</Text>
+                          <Text style={styles.ingredientAmount}>{ing.amount} {ing.unit}</Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity onPress={() => handleRemoveIngredient(ing.ingredientId)} style={{ marginLeft: 10 }}>
+                        <Trash size={20} color={colors.error} weight="bold" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
               </View>
             ) : (
-
               <Card style={styles.emptyIngredients}>
                 <EmptyState
                   message="Henüz malzeme eklemediniz."
                   style={{ padding: 0 }}
                 />
               </Card>
+            )}
+
+            {draftingIngredients.length > 0 && (
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Tarif Özeti (Toplam)</Text>
+                <View style={styles.summaryStats}>
+                  <Text style={styles.summaryStatText}>🔥 {Math.round(summary.calories)} kcal</Text>
+                  <Text style={styles.summaryStatText}>💰 {summary.cost.toFixed(2)} TL</Text>
+                  <Text style={styles.summaryStatText}>💪 {summary.protein.toFixed(1)}g protein</Text>
+                </View>
+              </View>
             )}
 
           </View>
@@ -476,16 +549,21 @@ export default function NewRecipeScreen() {
       {isTheMealDBSearchVisible && (
         <View style={styles.searchOverlay}>
           <View style={styles.overlayHeader}>
-            <Text style={styles.overlayTitle}>TheMealDB'den Tarif Bul</Text>
+            <Text style={styles.overlayTitle}>Hazır Tarif Ara</Text>
             <TouchableOpacity onPress={() => setIsTheMealDBSearchVisible(false)}>
               <Text style={styles.closeBtn}>Kapat</Text>
             </TouchableOpacity>
+          </View>
+          <View style={{ backgroundColor: colors.accentLight, borderRadius: radius.md, padding: spacing.md, marginHorizontal: spacing.md, marginBottom: spacing.md }}>
+            <Text style={{ fontFamily: typography.fontMedium, fontSize: 13, color: colors.accentDark, lineHeight: 20 }}>
+              ⚠️ Kalori ve maliyet değerleri malzemelere göre otomatik hesaplanır ancak kesin doğru olmayabilir. Malzemeleri kaydettikten sonra düzenleyebilirsiniz. Ayrıca her Türk yemeği bu veritabanında bulunmayabilir.
+            </Text>
           </View>
           <View style={styles.overlaySearch}>
             <Input
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="İngilizce yemek adı (Chicken, Pasta...)"
+              placeholder="Yemek adı (Tavuk, Makarna, Çorba...)"
             />
             <Button label="Ara" onPress={handleTheMealDBSearch} loading={isLoading} />
           </View>
@@ -732,6 +810,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     flex: 1,
+  },
+  ingredientImageBox: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ingredientImage: {
+    width: '100%',
+    height: '100%',
+  },
+  summaryCard: {
+    marginTop: spacing.md,
+    backgroundColor: colors.primaryLight + '20',
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  summaryTitle: {
+    fontFamily: typography.fontBold,
+    fontSize: 13,
+    color: colors.primaryDark,
+    marginBottom: 8,
+  },
+  summaryStats: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  summaryStatText: {
+    fontFamily: typography.fontSemiBold,
+    fontSize: 14,
+    color: colors.textPrimary,
   },
 });
 

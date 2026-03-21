@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, Share } from 'react-native';
 import { CaretLeft, Users, Flame, CreditCard, ShareNetwork } from 'phosphor-react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
@@ -29,6 +29,13 @@ export function RecipeDetailHeader({ recipe }: RecipeDetailHeaderProps) {
 
   const perServingCalories = Math.round(recipe.totalCalories / recipe.servings);
   const perServingCost = (recipe.totalCost / recipe.servings).toFixed(2);
+
+  const handleShare = async () => {
+    await Share.share({
+      message: `${recipe.name}\n\n🔥 ${Math.round(recipe.totalCalories)} kcal | ₺${recipe.totalCost.toFixed(2)}\n👥 ${recipe.servings} porsiyon\n\nKaloriTabak uygulamasından paylaşıldı.`,
+      title: recipe.name,
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -61,7 +68,7 @@ export function RecipeDetailHeader({ recipe }: RecipeDetailHeaderProps) {
               size={24}
             />
           </View>
-          <Pressable style={styles.actionBtn}>
+          <Pressable style={styles.actionBtn} onPress={handleShare}>
             <ShareNetwork size={24} color={colors.textPrimary} weight="bold" />
           </Pressable>
         </View>

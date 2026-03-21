@@ -24,18 +24,28 @@ export async function getUser(): Promise<(UserProfile & UserGoals & AppSettings)
     },
     dailyBudget: row.daily_budget_goal_tl,
     stepGoal: row.daily_step_goal,
-    notificationsEnabled: true, // simplified
+    exerciseCalorieGoal: 300, // default if not in DB
+    notificationsEnabled: true, // simplified global flag
+    notif_meal_reminder: row.notif_meal_reminder === 1,
+    notif_calorie_alert: row.notif_calorie_alert === 1,
+    notif_water_reminder: row.notif_water_reminder === 1,
+    notif_streak_warning: row.notif_streak_warning === 1,
+    notif_weekly_summary: row.notif_weekly_summary === 1,
+    breakfast_time: row.breakfast_time,
+    lunch_time: row.lunch_time,
+    dinner_time: row.dinner_time,
+    water_interval_hours: row.water_interval_hours,
+    water_start_time: row.water_start_time,
+    water_end_time: row.water_end_time,
+    weekly_summary_day: row.weekly_summary_day,
+    dataRetentionMonths: Math.round(row.data_retention_days / 30),
+    healthConnected: false, // implementation specific
     mealReminderTimes: {
       breakfast: row.breakfast_time,
       lunch: row.lunch_time,
       dinner: row.dinner_time,
       snack: '16:00', // default
     },
-    waterReminderIntervalMinutes: row.water_interval_hours * 60,
-    waterReminderStartHour: parseInt(row.water_start_time.split(':')[0]),
-    waterReminderEndHour: parseInt(row.water_end_time.split(':')[0]),
-    dataRetentionMonths: Math.round(row.data_retention_days / 30),
-    healthConnected: false, // implementation specific
   };
 }
 
@@ -80,4 +90,31 @@ export async function updateGoals(goals: UserGoals): Promise<void> {
     goals.dailyBudget,
     goals.stepGoal
   );
+}
+
+export async function updateAppSettings(settings: Partial<AppSettings>): Promise<void> {
+  const db = await getDB();
+  const sets: string[] = [];
+  const params: any[] = [];
+
+  if (settings.breakfast_time !== undefined) { sets.push('breakfast_time = ?'); params.push(settings.breakfast_time); }
+  if (settings.lunch_time !== undefined) { sets.push('lunch_time = ?'); params.push(settings.lunch_time); }
+  if (settings.dinner_time !== undefined) { sets.push('dinner_time = ?'); params.push(settings.dinner_time); }
+  
+  if (settings.notif_meal_reminder !== undefined) { sets.push('notif_meal_reminder = ?'); params.push(settings.notif_meal_reminder ? 1 : 0); }
+  if (settings.notif_calorie_alert !== undefined) { sets.push('notif_calorie_alert = ?'); params.push(settings.notif_calorie_alert ? 1 : 0); }
+  if (settings.notif_water_reminder !== undefined) { sets.push('notif_water_reminder = ?'); params.push(settings.notif_water_reminder ? 1 : 0); }
+  if (settings.notif_streak_warning !== undefined) { sets.push('notif_streak_warning = ?'); params.push(settings.notif_streak_warning ? 1 : 0); }
+  if (settings.notif_weekly_summary !== undefined) { sets.push('notif_weekly_summary = ?'); params.push(settings.notif_weekly_summary ? 1 : 0); }
+  
+  if (settings.water_interval_hours !== undefined) { sets.push('water_interval_hours = ?'); params.push(settings.water_interval_hours); }
+  if (settings.water_start_time !== undefined) { sets.push('water_start_time = ?'); params.push(settings.water_start_time); }
+  if (settings.water_end_time !== undefined) { sets.push('water_end_time = ?'); params.push(settings.water_end_time); }
+  if (settings.weekly_summary_day !== undefined) { sets.push('weekly_summary_day = ?'); params.push(settings.weekly_summary_day); }
+
+  if (sets.length === 0) return;
+
+  params.push(1); // id
+  await db.runAsync(`UPDATE user SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, ...params);
+
 }

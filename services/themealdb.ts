@@ -90,26 +90,49 @@ export async function getCategories(): Promise<any[]> {
  * Filters recipes by category name.
  */
 export async function filterByCategory(category: string): Promise<any[]> {
-    try {
-      const response = await fetch(`${BASE_URL}/filter.php?c=${encodeURIComponent(category)}`);
-      const json = await response.json();
-      return json?.meals ?? [];
-    } catch (error) {
-      console.warn('[TheMealDB API] Error filtering by category:', error);
-      return [];
-    }
+  try {
+    const response = await fetch(`${BASE_URL}/filter.php?c=${encodeURIComponent(category)}`);
+    const json = await response.json();
+    const meals = json?.meals ?? [];
+
+    // filter.php sadece idMeal, strMeal, strMealThumb döndürüyor
+    // Bunu DiscoverCard'ın beklediği formata çevir
+    return meals.map((meal: any) => ({
+      id: meal.idMeal,
+      name: meal.strMeal,
+      imageUrl: meal.strMealThumb,
+      category: category,
+    }));
+  } catch (error) {
+    console.warn('[TheMealDB API] Error filtering by category:', error);
+    return [];
+  }
 }
 
 /**
  * Filters recipes by cuisine/area name.
  */
 export async function filterByCuisine(cuisine: string): Promise<any[]> {
-    try {
-      const response = await fetch(`${BASE_URL}/filter.php?a=${encodeURIComponent(cuisine)}`);
-      const json = await response.json();
-      return json?.meals ?? [];
-    } catch (error) {
-      console.warn('[TheMealDB API] Error filtering by cuisine:', error);
-      return [];
-    }
+  try {
+    const response = await fetch(`${BASE_URL}/filter.php?a=${encodeURIComponent(cuisine)}`);
+    const json = await response.json();
+    const meals = json?.meals ?? [];
+
+    // filter.php sadece idMeal, strMeal, strMealThumb döndürüyor
+    // Bunu DiscoverCard'ın beklediği formata çevir
+    return meals.map((meal: any) => ({
+      id: meal.idMeal,
+      name: meal.strMeal,
+      imageUrl: meal.strMealThumb,
+      cuisine: cuisine,
+    }));
+  } catch (error) {
+    console.warn('[TheMealDB API] Error filtering by cuisine:', error);
+    return [];
+  }
 }
+
+export const getRandomMeal = getRandomRecipe;
+export const getMealsByCategory = filterByCategory;
+export const getMealsByArea = filterByCuisine;
+export const searchMeals = searchRecipes;

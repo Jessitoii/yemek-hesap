@@ -15,8 +15,8 @@ interface ActivityState {
   // Actions
   loadActivity: (date: string) => Promise<void>;
   addExercise: (exercise: Omit<Exercise, 'id' | 'dailyLogId' | 'time'>) => Promise<void>;
-  deleteExercise: (id: string) => Promise<void>; // placeholder
-  updateSteps: (steps: number, burnedCalories: number) => Promise<void>;
+  deleteExercise: (id: string) => Promise<void>;
+  updateSteps: (steps: number) => Promise<void>;
 }
 
 export const useActivityStore = create<ActivityState>((set, get) => ({
@@ -29,9 +29,16 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   loadActivity: async (date) => {
     set({ isLoading: true });
     try {
-      // In a real app, you would fetch activity logs for the date.
-      // Currently, most activity state is held in dailyStore's todayLog.
-      // But we consolidate streak here.
+      const todayLog = useDailyStore.getState().todayLog;
+      if (todayLog) {
+         const exercisesData = await import('@/db/queries/activity').then(m => m.getExercises(todayLog.id));
+         set({ 
+            exercises: exercisesData,
+            todaySteps: todayLog.stepCount || 0,
+            todayBurnedCalories: todayLog.burnedCalories || 0
+         });
+      }
+      
       const currentStreak = await getCurrentStreak();
       set({ streak: currentStreak });
     } finally {
@@ -52,12 +59,14 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       };
 
       await addExercise(newExercise);
-      // Adding exercise also updates burned_calories in daily_log
-      await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
       
+      // Reload daily log to get up-to-date total burned calories
+      const updatedLog = await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
+      
+      // Update local state
       set(state => ({
-        exercises: [...state.exercises, newExercise],
-        todayBurnedCalories: state.todayBurnedCalories + newExercise.burnedCalories
+        exercises: [newExercise, ...state.exercises],
+        todayBurnedCalories: useDailyStore.getState().todayLog?.burnedCalories || (state.todayBurnedCalories + newExercise.burnedCalories)
       }));
     } catch (error) {
       console.error('[ActivityStore] Error adding exercise:', error);
@@ -65,21 +74,40 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   },
 
   deleteExercise: async (id) => {
-    // Placeholder - query for deleting exercise would go here.
-    set(state => ({
-      exercises: state.exercises.filter(e => e.id !== id)
-    }));
-  },
-
-  updateSteps: async (steps, burnedCalories) => {
     const todayLog = useDailyStore.getState().todayLog;
     if (!todayLog) return;
 
     try {
-      await updateSteps(todayLog.id, steps, burnedCalories);
-      set({ todaySteps: steps, todayBurnedCalories: burnedCalories });
-      // Update dailyLog in store
+      const { deleteExercise } = await import('@/db/queries/activity');
+      await deleteExercise(id, todayLog.id);
+
+      // Reload daily log
       await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
+
+      set(state => ({
+        exercises: state.exercises.filter(e => e.id !== id),
+        todayBurnedCalories: useDailyStore.getState().todayLog?.burnedCalories || state.todayBurnedCalories
+      }));
+    } catch (error) {
+      console.error('[ActivityStore] Error deleting exercise:', error);
+    }
+  },
+
+  updateSteps: async (steps) => {
+    const todayLog = useDailyStore.getState().todayLog;
+    if (!todayLog) return;
+
+    try {
+      const { updateSteps: updateStepsQuery } = await import('@/db/queries/activity');
+      await updateStepsQuery(todayLog.id, steps);
+      
+      // Reload daily log
+      await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
+      
+      set({ 
+        todaySteps: steps, 
+        todayBurnedCalories: useDailyStore.getState().todayLog?.burnedCalories || 0 
+      });
     } catch (error) {
       console.error('[ActivityStore] Error updating steps:', error);
     }

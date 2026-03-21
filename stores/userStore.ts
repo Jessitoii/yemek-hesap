@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { UserProfile, UserGoals, AppSettings } from '@/types/user';
-import { getUser, updateUser, updateGoals } from '@/db/queries/user';
+import { UserProfile, UserGoals, AppSettings, UserStats } from '@/types/user';
+import { getUser, updateUser, updateGoals, updateAppSettings } from '@/db/queries/user';
 
 interface UserState {
   profile: UserProfile | null;
@@ -9,8 +9,10 @@ interface UserState {
   isLoading: boolean;
   onboardingCompleted: boolean;
 
+  stats: UserStats | null;
   // Actions
   loadUser: () => Promise<void>;
+  loadStats: () => Promise<void>;
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
   updateGoals: (goals: UserGoals) => Promise<void>;
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
@@ -21,6 +23,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   profile: null,
   goals: null,
   settings: null,
+  stats: null,
   isLoading: true,
   onboardingCompleted: false,
 
@@ -40,6 +43,16 @@ export const useUserStore = create<UserState>((set, get) => ({
       console.error('[UserStore] Error loading user:', error);
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  loadStats: async () => {
+    try {
+      const { getUserStats } = await import('@/db/queries/stats');
+      const stats = await getUserStats();
+      set({ stats });
+    } catch (error) {
+      console.error('[UserStore] Error loading stats:', error);
     }
   },
 
@@ -69,8 +82,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     if (!currentSettings) return;
 
     try {
-      // In a real app, this would call a db update query for settings.
-      // For now we persist it in memory and assume a placeholder db function.
+      await updateAppSettings(settingsUpdates);
       set({ settings: { ...currentSettings, ...settingsUpdates } });
     } catch (error) {
       console.error('[UserStore] Error updating settings:', error);

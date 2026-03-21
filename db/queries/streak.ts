@@ -21,3 +21,17 @@ export async function markDayComplete(date: string, completed: boolean): Promise
     completed ? currentStreak + 1 : 0
   );
 }
+
+export async function getStreakHistory(): Promise<StreakDay[]> {
+  const db = await getDB();
+  const rows = await db.getAllAsync<any>(
+    'SELECT date, completed FROM streak ORDER BY date DESC LIMIT 31'
+  );
+  return rows.map(r => ({
+    date: new Date(r.date),
+    completed: r.completed === 1,
+    calorieGoalReached: true,
+    stepGoalReached: true,
+    budgetGoalReached: true,
+  }));
+}

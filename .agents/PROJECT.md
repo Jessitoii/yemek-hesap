@@ -62,88 +62,88 @@ Her şeyin temeli. Bitmeden hiçbir özellik yazılamaz.
 ### Katman 1 — Store & Servisler
 UI olmadan test edilebilir katman.
 
-- [ ] `stores/userStore.ts`
-- [ ] `stores/recipesStore.ts`
-- [ ] `stores/dailyStore.ts`
-- [ ] `stores/activityStore.ts`
-- [ ] `services/migros.ts`
-- [ ] `services/themealdb.ts`
-- [ ] `services/openfoodfacts.ts`
-- [ ] `services/usda.ts`
-- [ ] `services/mymemory.ts`
-- [ ] `services/unsplash.ts`
-- [ ] `services/ddgs.ts`
-- [ ] `services/cerebras.ts`
-- [ ] `services/health.ts`
-- [ ] `hooks/useMigrosSearch.ts`
-- [ ] `hooks/useTranslate.ts`
-- [ ] `hooks/useNutrition.ts`
-- [ ] `hooks/usePedometer.ts`
-- [ ] `hooks/useNotifications.ts`
-- [ ] `hooks/useHealthKit.ts`
+- [x] `stores/userStore.ts`
+- [x] `stores/recipesStore.ts`
+- [x] `stores/dailyStore.ts`
+- [x] `stores/activityStore.ts`
+- [x] `services/migros.ts`
+- [x] `services/themealdb.ts`
+- [x] `services/openfoodfacts.ts`
+- [x] `services/usda.ts`
+- [x] `services/mymemory.ts`
+- [x] `services/unsplash.ts`
+- [x] `services/ddgs.ts`
+- [x] `services/cerebras.ts`
+- [x] `services/health.ts`
+- [x] `hooks/useMigrosSearch.ts`
+- [x] `hooks/useTranslate.ts`
+- [x] `hooks/useNutrition.ts`
+- [x] `hooks/usePedometer.ts`
+- [x] `hooks/useNotifications.ts`
+- [x] `hooks/useHealthKit.ts`
 
 ### Katman 2 — Onboarding
 İlk açılışta gösterilecek 7 slide.
 
-- [ ] `app/(onboarding)/_layout.tsx`
-- [ ] `app/(onboarding)/index.tsx` — slide 1: karşılama + isim
-- [ ] `app/(onboarding)/slide2.tsx` — maliyet tanıtımı
-- [ ] `app/(onboarding)/slide3.tsx` — kalori tanıtımı
-- [ ] `app/(onboarding)/slide4.tsx` — hedef seçimi
-- [ ] `app/(onboarding)/slide5.tsx` — profil bilgileri
-- [ ] `app/(onboarding)/slide6.tsx` — aktivite seviyesi
-- [ ] `app/(onboarding)/slide7.tsx` — hazır ekranı
-- [ ] `components/onboarding/SlideContainer.tsx`
-- [ ] `components/onboarding/GoalOption.tsx`
-- [ ] `components/onboarding/ActivityLevelOption.tsx`
+- [x] `app/(onboarding)/_layout.tsx`
+- [x] `app/(onboarding)/index.tsx` — slide 1: karşılama + isim
+- [x] `app/(onboarding)/slide2.tsx` — maliyet tanıtımı
+- [x] `app/(onboarding)/slide3.tsx` — kalori tanıtımı
+- [x] `app/(onboarding)/slide4.tsx` — hedef seçimi
+- [x] `app/(onboarding)/slide5.tsx` — profil bilgileri
+- [x] `app/(onboarding)/slide6.tsx` — aktivite seviyesi
+- [x] `app/(onboarding)/slide7.tsx` — hazır ekranı
+- [x] `components/onboarding/SlideContainer.tsx`
+- [x] `components/onboarding/GoalOption.tsx`
+- [x] `components/onboarding/ActivityLevelOption.tsx`
 
 ### Katman 3 — Temel UI Bileşenleri
 Tüm ekranlar bu bileşenleri kullanır.
 
-- [ ] `components/ui/Button.tsx`
-- [ ] `components/ui/Card.tsx`
-- [ ] `components/ui/Input.tsx`
-- [ ] `components/ui/Modal.tsx`
-- [ ] `components/ui/Badge.tsx`
-- [ ] `components/ui/Chip.tsx`
-- [ ] `components/ui/Divider.tsx`
-- [ ] `components/ui/EmptyState.tsx`
-- [ ] `components/ui/LoadingSpinner.tsx`
-- [ ] `components/ui/ProgressBar.tsx`
-- [ ] `components/ui/ProgressRing.tsx`
-- [ ] `components/ui/Avatar.tsx`
-- [ ] `components/ui/Toast.tsx`
+- [x] `components/ui/Button.tsx`
+- [x] `components/ui/Card.tsx`
+- [x] `components/ui/Input.tsx`
+- [x] `components/ui/Modal.tsx`
+- [x] `components/ui/Badge.tsx`
+- [x] `components/ui/Chip.tsx`
+- [x] `components/ui/Divider.tsx`
+- [x] `components/ui/EmptyState.tsx`
+- [x] `components/ui/LoadingSpinner.tsx`
+- [x] `components/ui/ProgressBar.tsx`
+- [x] `components/ui/ProgressRing.tsx`
+- [x] `components/ui/Avatar.tsx`
+- [x] `components/ui/Toast.tsx`
 
 ### Katman 4 — Tab: Günlük Takip (Daily)
 En kritik özellik. Önce bunu yap.
 
-- [ ] `app/(tabs)/daily/index.tsx` — günlük özet
-- [ ] `app/(tabs)/daily/add-meal.tsx` — öğün ekle
-- [ ] `app/(tabs)/daily/history.tsx` — geçmiş takvim
-- [ ] `components/daily/CalorieRing.tsx`
-- [ ] `components/daily/DailyStatsRow.tsx`
-- [ ] `components/daily/MealSection.tsx`
-- [ ] `components/daily/MealItemRow.tsx`
-- [ ] `components/daily/MacroSummary.tsx`
-- [ ] `components/daily/RecipeSuggestionCard.tsx`
+- [x] `app/(tabs)/daily/index.tsx` — günlük özet
+- [x] `app/(tabs)/daily/add-meal.tsx` — öğün ekle
+- [x] `app/(tabs)/daily/history.tsx` — geçmiş takvim
+- [x] `components/daily/CalorieRing.tsx`
+- [x] `components/daily/DailyStatsRow.tsx`
+- [x] `components/daily/MealSection.tsx`
+- [x] `components/daily/MealItemRow.tsx`
+- [x] `components/daily/MacroSummary.tsx`
+- [x] `components/daily/RecipeSuggestionCard.tsx`
 
 ### Katman 5 — Tab: Tarifler (Recipes)
 
-- [ ] `app/(tabs)/recipes/index.tsx` — tarif listesi
-- [ ] `app/(tabs)/recipes/[id].tsx` — tarif detay
-- [ ] `app/(tabs)/recipes/new.tsx` — yeni tarif
-- [ ] `app/(tabs)/recipes/ingredient-match.tsx` — Migros eşleştirme
-- [ ] `app/(tabs)/recipes/my-ingredients/index.tsx`
-- [ ] `app/(tabs)/recipes/my-ingredients/[id].tsx`
-- [ ] `components/recipes/RecipeCard.tsx`
-- [ ] `components/recipes/RecipeDetailHeader.tsx`
-- [ ] `components/recipes/IngredientRow.tsx`
-- [ ] `components/recipes/IngredientMatchList.tsx`
-- [ ] `components/recipes/MigrosProductCard.tsx`
-- [ ] `components/recipes/QuantityInput.tsx`
-- [ ] `components/recipes/PriceHistory.tsx`
-- [ ] `components/recipes/MacroBar.tsx`
-- [ ] `components/recipes/FavoriteButton.tsx`
+- [x] `app/(tabs)/recipes/index.tsx` — tarif listesi
+- [x] `app/(tabs)/recipes/[id].tsx` — tarif detay
+- [x] `app/(tabs)/recipes/new.tsx` — yeni tarif
+- [x] `app/(tabs)/recipes/ingredient-match.tsx` — Migros eşleştirme
+- [x] `app/(tabs)/recipes/my-ingredients/index.tsx`
+- [x] `app/(tabs)/recipes/my-ingredients/[id].tsx`
+- [x] `components/recipes/RecipeCard.tsx`
+- [x] `components/recipes/RecipeDetailHeader.tsx`
+- [x] `components/recipes/IngredientRow.tsx`
+- [x] `components/recipes/IngredientMatchList.tsx`
+- [x] `components/recipes/MigrosProductCard.tsx`
+- [x] `components/recipes/QuantityInput.tsx`
+- [x] `components/recipes/PriceHistory.tsx`
+- [x] `components/recipes/MacroBar.tsx`
+- [x] `components/recipes/FavoriteButton.tsx`
 
 ### Katman 6 — Tab: Keşfet (Discover)
 

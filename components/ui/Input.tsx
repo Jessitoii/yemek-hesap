@@ -25,6 +25,9 @@ interface InputProps {
   leftIcon?: React.ReactNode;
   multiline?: boolean;
   numberOfLines?: number;
+  onSubmitEditing?: () => void;
+  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
 
@@ -41,6 +44,9 @@ export const Input: React.FC<InputProps> = ({
   leftIcon,
   multiline,
   numberOfLines,
+  onSubmitEditing,
+  returnKeyType,
+  autoCapitalize,
 }) => {
 
   const [isFocused, setIsFocused] = useState(false);
@@ -88,6 +94,9 @@ export const Input: React.FC<InputProps> = ({
           secureTextEntry={secureTextEntry}
           multiline={multiline}
           numberOfLines={numberOfLines}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
+          autoCapitalize={autoCapitalize}
         />
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}

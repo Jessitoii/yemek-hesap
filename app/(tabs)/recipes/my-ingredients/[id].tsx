@@ -33,6 +33,7 @@ import { spacing, radius, shadow } from '@/constants/theme';
 import { typography } from '@/constants/typography';
 import { getNutritionFromOFF } from '@/services/openfoodfacts';
 import { Ingredient } from '@/types/ingredient';
+import { toGrams } from '@/utils/unitConverter';
 
 export default function IngredientDetailScreen() {
   const router = useRouter();
@@ -155,6 +156,62 @@ export default function IngredientDetailScreen() {
     };
 
     await addIngredient(newIngredient);
+
+    // If part of a recipe, update the recipe
+    if (recipeId) {
+      const { recipes, ingredients: allIngs, updateRecipe } = useRecipesStore.getState();
+      const recipe = recipes.find(r => r.id === recipeId);
+      
+      if (recipe) {
+        const updatedIngredients = recipe.ingredients.map(ing => {
+          if (ing.ingredientId === newIngredient.id) {
+            const numAmount = parseFloat(amount) || 0;
+            return {
+              ...ing,
+              amount: numAmount,
+              unit: unit,
+              grams: toGrams(numAmount, unit, name) || 0
+            };
+          }
+          return ing;
+        });
+
+        // Recalculate totals for the entire recipe
+        const totals = updatedIngredients.reduce((acc, ing) => {
+          // Use newIngredient if it's the one we just saved, otherwise find in store
+          const detail = (ing.ingredientId === newIngredient.id) 
+            ? newIngredient 
+            : allIngs.find(i => i.id === ing.ingredientId);
+          
+          if (detail) {
+            const ratio = ing.grams / 100;
+            acc.calories += (detail.nutrition?.calories || 0) * ratio;
+            acc.protein += (detail.nutrition?.protein || 0) * ratio;
+            acc.carbs += (detail.nutrition?.carbs || 0) * ratio;
+            acc.fat += (detail.nutrition?.fat || 0) * ratio;
+            const detailServing = detail.nutrition?.servingSize || 100;
+            acc.cost += (detail.lastKnownPrice || 0) * (ing.grams / detailServing);
+          }
+          return acc;
+        }, { calories: 0, protein: 0, carbs: 0, fat: 0, cost: 0 });
+
+        const updatedRecipe = {
+          ...recipe,
+          ingredients: updatedIngredients,
+          totalCalories: totals.calories,
+          totalCost: totals.cost,
+          macros: {
+            protein: totals.protein,
+            carbs: totals.carbs,
+            fat: totals.fat
+          },
+          updatedAt: new Date()
+        };
+
+        await updateRecipe(updatedRecipe);
+      }
+    }
+
     router.back();
   };
 

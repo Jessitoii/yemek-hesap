@@ -253,6 +253,9 @@ function translateUnit(unit: string): string {
     'sprigs': 'dal',
     'stalk': 'sap',
     'stalks': 'sap',
+    'large': 'büyük',
+    'small': 'küçük',
+    'medium': 'orta',
   };
 
   // If match exactly, return it

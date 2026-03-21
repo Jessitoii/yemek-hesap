@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  TextInput
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   Plus,
@@ -24,12 +24,19 @@ import { spacing, radius, shadow } from '@/constants/theme';
 import { typography } from '@/constants/typography';
 
 export default function RecipesScreen() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const router = useRouter();
   const { recipes, isLoading, loadRecipes, deleteRecipe } = useRecipesStore();
+
 
   useEffect(() => {
     loadRecipes();
   }, []);
+
+  const filteredRecipes = recipes.filter(recipe =>
+    recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleDelete = (id: string, name: string) => {
     Alert.alert(
@@ -59,7 +66,7 @@ export default function RecipesScreen() {
 
         <TouchableOpacity
           style={styles.headerIconBtn}
-          onPress={() => router.push('/(tabs)/recipes/search')}
+          onPress={() => setIsSearchVisible(!isSearchVisible)}
         >
           <MagnifyingGlass size={24} color={colors.primaryDark} weight="bold" />
         </TouchableOpacity>
@@ -88,9 +95,27 @@ export default function RecipesScreen() {
   return (
     <View style={styles.container} >
       {renderHeader()}
-
+      {isSearchVisible && (
+        <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.surface }}>
+          <TextInput
+            autoFocus
+            placeholder="Tariflerimde ara..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{
+              backgroundColor: colors.surfaceAlt,
+              borderRadius: radius.md,
+              paddingHorizontal: spacing.md,
+              height: 44,
+              fontFamily: typography.fontMedium,
+              fontSize: 15,
+              color: colors.textPrimary,
+            }}
+          />
+        </View>
+      )}
       <FlatList
-        data={recipes}
+        data={filteredRecipes}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <RecipeCard recipe={item} />
@@ -106,9 +131,9 @@ export default function RecipesScreen() {
             />
             <View style={styles.emptyActions}>
               <Button
-                label="Tarif Ara / Keşfet"
+                label="Tarifleri Keşfet"
                 variant="secondary"
-                onPress={() => router.push('/(tabs)/recipes/search')}
+                onPress={() => router.push('/(tabs)/discover')}
                 fullWidth
               />
             </View>

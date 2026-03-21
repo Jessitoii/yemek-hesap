@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { CaretRight } from 'phosphor-react-native';
+import { CaretRight, ChefHat } from 'phosphor-react-native';
 import { RecipeIngredient } from '@/types/recipe';
 import { Ingredient } from '@/types/ingredient';
 import { colors } from '@/constants/colors';
@@ -37,10 +37,13 @@ export function IngredientRow({ ingredient, onPress }: IngredientRowProps) {
     >
       <View style={styles.imageBox}>
         {detail?.imageUrl ? (
-          <Image source={{ uri: detail.imageUrl }} style={styles.image} />
+          <Image 
+            source={{ uri: detail.imageUrl.startsWith('//') ? `https:${detail.imageUrl}` : detail.imageUrl }} 
+            style={styles.image} 
+          />
         ) : (
           <View style={[styles.image, styles.noImage]}>
-             <Text style={styles.noImageText}>?</Text>
+             <ChefHat size={24} color={colors.textDisabled} />
           </View>
         )}
       </View>

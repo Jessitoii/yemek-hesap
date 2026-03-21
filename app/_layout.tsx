@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import * as Notifications from 'expo-notifications';
+import * as SplashScreen from 'expo-splash-screen'; // ← 1. IMPORT EKLENDİ
+
 import { Stack, useRouter, useSegments } from "expo-router";
 import {
   useFonts,
@@ -10,6 +13,9 @@ import {
 } from "@expo-google-fonts/nunito";
 import { initDB } from "../db";
 import { clearCalorieCache } from "@/db/queries/cache";
+
+// ← 2. COMPONENT DIŞINDA — splash'i hazır olana kadar tut
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
@@ -25,7 +31,19 @@ export default function RootLayout() {
     'Nunito-ExtraBold': Nunito_800ExtraBold,
   });
 
-
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch (error) {
+    console.debug('[RootLayout] Notifications not supported in this environment');
+  }
 
   useEffect(() => {
     async function init() {
@@ -37,7 +55,7 @@ export default function RootLayout() {
         const { useDailyStore } = await import("@/stores/dailyStore")
 
         await useUserStore.getState().loadUser()
-        setUserLoaded(true)  // ← BURAYA EKLE
+        setUserLoaded(true)
 
         await useRecipesStore.getState().loadRecipes()
         await useRecipesStore.getState().loadIngredients()
@@ -47,7 +65,7 @@ export default function RootLayout() {
 
       } catch (e) {
         console.error("Initialization failed:", e)
-        setUserLoaded(true)  // ← HATA OLSA DA DEVAM ET
+        setUserLoaded(true)
       } finally {
         setDbReady(true)
       }
@@ -55,24 +73,29 @@ export default function RootLayout() {
     init()
   }, [])
 
+  // ← 3. SPLASH'İ KAPAT — fontlar ve db hazır olunca
   useEffect(() => {
-    if (!userLoaded || !fontsLoaded) return  // dbReady yerine userLoaded
+    if ((fontsLoaded || fontError) && dbReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError, dbReady])
+
+  useEffect(() => {
+    if (!userLoaded || !fontsLoaded) return
 
     const { useUserStore } = require("@/stores/userStore")
     const onboardingCompleted = useUserStore.getState().onboardingCompleted
     const inOnboardingGroup = segments[0] === "(onboarding)"
-    console.log('segments:', segments)
-    console.log('onboardingCompleted:', useUserStore.getState().onboardingCompleted)
     if (!onboardingCompleted && !inOnboardingGroup) {
       router.replace("/(onboarding)")
     } else if (onboardingCompleted && inOnboardingGroup) {
-      router.replace("/(tabs)/daily")
+      router.replace("/(tabs)/discover")
     }
   }, [userLoaded, fontsLoaded, segments])
 
-
-  if (!fontsLoaded && !fontError) return null;
-  if (!dbReady) return null;
+  // ← 4. NULL RETURN'LER KALDIRILDI — splash zaten ekranı kapatıyor
+  // if (!fontsLoaded && !fontError) return null;  // artık gerekmiyor
+  // if (!dbReady) return null;                    // artık gerekmiyor
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

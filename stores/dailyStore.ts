@@ -17,7 +17,7 @@ interface DailyState {
   // Actions
   setSelectedDate: (date: string) => void;
   loadLog: (date: string) => Promise<void>;
-  addMeal: (meal: Omit<Meal, 'id' | 'dailyLogId' | 'time'>) => Promise<void>;
+  addMeal: (meal: Omit<Meal, 'id' | 'dailyLogId' | 'time'>, date?: string) => Promise<void>;
   deleteMeal: (id: string) => Promise<void>;
   addWater: (ml: number) => Promise<void>;
   updateSuggestion: () => void;
@@ -50,13 +50,21 @@ export const useDailyStore = create<DailyState>((set, get) => ({
     }
   },
 
-  addMeal: async (mealData) => {
-    const log = get().todayLog;
+  addMeal: async (mealData, date) => {
+    const dateToUse = date || get().selectedDate;
+    let log = await getLogByDate(dateToUse);
+
+    if (!log) {
+      const newLogId = generateId();
+      await createLog(newLogId, dateToUse);
+      log = await getLogByDate(dateToUse);
+    }
+
     if (!log) return;
 
     try {
       const newMeal: Meal = {
-        ...mealData,
+        ...(mealData as any),
         id: generateId(),
         dailyLogId: log.id,
         time: new Date(),
@@ -65,10 +73,19 @@ export const useDailyStore = create<DailyState>((set, get) => ({
       await addMeal(newMeal);
       await updateLogTotals(log.id);
       
-      // Reload log to get up-to-date totals
-      await get().loadLog(get().selectedDate);
-      
-      // TODO: Trigger calorie warning if daily goal exceeded (handled in UI or Hook)
+      // Refresh current log if target date matches selected date
+      if (dateToUse === get().selectedDate) {
+        await get().loadLog(get().selectedDate);
+        
+        // Trigger calorie alert
+        const currentLog = get().todayLog;
+        const userGoals = useUserStore.getState().goals;
+        if (currentLog && userGoals) {
+          const { triggerCalorieAlert } = await import('@/hooks/useNotifications');
+          triggerCalorieAlert(currentLog.totalCalories, userGoals.dailyCalorieTarget);
+        }
+      }
+
     } catch (error) {
       console.error('[DailyStore] Error adding meal:', error);
     }
@@ -82,6 +99,15 @@ export const useDailyStore = create<DailyState>((set, get) => ({
       await deleteMeal(id);
       await updateLogTotals(log.id);
       await get().loadLog(get().selectedDate);
+
+      // Trigger calorie alert
+      const currentLog = get().todayLog;
+      const userGoals = useUserStore.getState().goals;
+      if (currentLog && userGoals) {
+        const { triggerCalorieAlert } = await import('@/hooks/useNotifications');
+        triggerCalorieAlert(currentLog.totalCalories, userGoals.dailyCalorieTarget);
+      }
+
     } catch (error) {
       console.error('[DailyStore] Error deleting meal:', error);
     }

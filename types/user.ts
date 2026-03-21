@@ -39,20 +39,39 @@ export interface UserGoals {
   };
   dailyBudget: number;
   stepGoal: number;
+  exerciseCalorieGoal: number;
   waterGoal?: number;
 }
 
 export interface AppSettings {
   notificationsEnabled: boolean;
+  notif_meal_reminder: boolean;
+  notif_calorie_alert: boolean;
+  notif_water_reminder: boolean;
+  notif_streak_warning: boolean;
+  notif_weekly_summary: boolean;
+  breakfast_time: string;
+  lunch_time: string;
+  dinner_time: string;
+  water_interval_hours: number;
+  water_start_time: string;
+  water_end_time: string;
+  weekly_summary_day: string;
+  dataRetentionMonths: number;
+  healthConnected: boolean;
   mealReminderTimes: {
     breakfast: string;
     lunch: string;
     dinner: string;
     snack: string;
   };
-  waterReminderIntervalMinutes: number;
-  waterReminderStartHour: number;
-  waterReminderEndHour: number;
-  dataRetentionMonths: number;
-  healthConnected: boolean;
+}
+
+
+export interface UserStats {
+  monthlySpending: number;
+  monthlyAvgCalories: number;
+  mostCookedRecipeName: string;
+  totalBurnedCalories: number;
+  longestStreak: number;
 }
