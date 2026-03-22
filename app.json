@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "KaloriTabak",
-    "slug": "KaloriTabak",
+    "name": "Yemek Hesap",
+    "slug": "YemekHesap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +22,7 @@
     },
     "android": {
       "splash": {
-        "image": "./assets/images/splash.png",
+        "image": "./assets/splash.png",
         "resizeMode": "contain",
         "backgroundColor": "#4FC3F7",
         "mdpi": "./assets/splash.png",
@@ -38,7 +38,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.jessitoi.KaloriTabak"
+      "package": "com.jessitoi.yemekhesap"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -58,16 +58,16 @@
       ],
       "@react-native-community/datetimepicker"
     ],
-    "extra": {
-      "eas": {
-        "projectId": "fb118ed3-ee3b-4602-99af-3227c685b02f"
-      }
-    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/fb118ed3-ee3b-4602-99af-3227c685b02f"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "36ae6de0-c605-4076-9ba8-be08506ede26"
+      }
     }
   }
 }

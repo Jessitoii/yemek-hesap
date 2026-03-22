@@ -1,6 +1,12 @@
-import * as Notifications from 'expo-notifications';
-import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { AppSettings } from '@/types/user';
+import Constants from 'expo-constants';
+
+const isExpoGo = require('expo-constants').default.appOwnership === 'expo';
+const Notifications = isExpoGo ? null : require('expo-notifications');
+const SchedulableTriggerInputTypes = isExpoGo 
+  ? {} 
+  : require('expo-notifications').SchedulableTriggerInputTypes;
+
 
 const DAY_MAP: Record<string, number> = {
   sunday: 1,
@@ -13,7 +19,13 @@ const DAY_MAP: Record<string, number> = {
 };
 
 export async function requestPermission(): Promise<boolean> {
+  if (isExpoGo) {
+    console.warn('[Notifications] Notifications are not supported in Expo Go. Please use a development build.');
+    return false;
+  }
+
   try {
+    if (!Notifications) return false;
     const { status: existing } = await Notifications.getPermissionsAsync();
     if (existing === 'granted') return true;
 
@@ -52,7 +64,13 @@ const parseTime = (timeStr: string): [number, number] => {
 };
 
 export async function scheduleMealReminders(settings: AppSettings) {
+  if (isExpoGo) {
+    console.warn('[Notifications] Cannot schedule meal reminders in Expo Go.');
+    return;
+  }
+
   try {
+    if (!Notifications) return;
     await Notifications.cancelScheduledNotificationAsync('meal-reminder-breakfast');
     await Notifications.cancelScheduledNotificationAsync('meal-reminder-lunch');
     await Notifications.cancelScheduledNotificationAsync('meal-reminder-dinner');
@@ -88,9 +106,15 @@ export async function scheduleMealReminders(settings: AppSettings) {
 }
 
 export async function scheduleWaterReminders(settings: AppSettings) {
+  if (isExpoGo) {
+    console.warn('[Notifications] Cannot schedule water reminders in Expo Go.');
+    return;
+  }
+
   try {
+    if (!Notifications) return;
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    const waterReminders = scheduled.filter((n: Notifications.NotificationRequest) => n.identifier.startsWith('water-reminder-'));
+    const waterReminders = scheduled.filter((n: any) => n.identifier.startsWith('water-reminder-'));
     for (const n of waterReminders) {
       await Notifications.cancelScheduledNotificationAsync(n.identifier);
     }
@@ -125,7 +149,13 @@ export async function scheduleWaterReminders(settings: AppSettings) {
 }
 
 export async function scheduleStreakWarning(settings: AppSettings) {
+  if (isExpoGo) {
+    console.warn('[Notifications] Cannot schedule streak warning in Expo Go.');
+    return;
+  }
+
   try {
+    if (!Notifications) return;
     await Notifications.cancelScheduledNotificationAsync('streak-warning');
     if (!settings.notif_streak_warning) return;
 
@@ -149,7 +179,13 @@ export async function scheduleStreakWarning(settings: AppSettings) {
 }
 
 export async function scheduleWeeklySummary(settings: AppSettings) {
+  if (isExpoGo) {
+    console.warn('[Notifications] Cannot schedule weekly summary in Expo Go.');
+    return;
+  }
+
   try {
+    if (!Notifications) return;
     await Notifications.cancelScheduledNotificationAsync('weekly-summary');
     if (!settings.notif_weekly_summary) return;
 
@@ -177,7 +213,13 @@ export async function scheduleWeeklySummary(settings: AppSettings) {
 }
 
 export async function triggerCalorieAlert(consumed: number, goal: number) {
+  if (isExpoGo) {
+    console.warn('[Notifications] Cannot trigger calorie alert in Expo Go.');
+    return;
+  }
+
   try {
+    if (!Notifications) return;
     const { useUserStore } = await import('@/stores/userStore');
     const settings = useUserStore.getState().settings;
     if (!settings?.notif_calorie_alert) return;
@@ -220,6 +262,7 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
 
 export async function cancelAll() {
   try {
+    if (!Notifications) return;
     await Notifications.cancelAllScheduledNotificationsAsync();
   } catch (error) {
     console.warn('[Notifications] cancelAll failed:', error);
@@ -227,6 +270,10 @@ export async function cancelAll() {
 }
 
 export async function scheduleAll(settings: AppSettings) {
+  if (isExpoGo) {
+    console.warn('[Notifications] Cannot schedule all notifications in Expo Go.');
+    return;
+  }
   try {
     await cancelAll();
     if (!settings.notificationsEnabled) return;
@@ -241,6 +288,19 @@ export async function scheduleAll(settings: AppSettings) {
 }
 
 export function useNotifications() {
+  if (isExpoGo) {
+    console.warn('[Notifications] Notifications are not supported in Expo Go. Please use a development build.');
+    return {
+      requestPermission: async () => false,
+      scheduleMealReminders: async () => { },
+      scheduleWaterReminders: async () => { },
+      scheduleStreakWarning: async () => { },
+      scheduleWeeklySummary: async () => { },
+      triggerCalorieAlert: async () => { },
+      scheduleAll: async () => { },
+      cancelAll: async () => { },
+    };
+  }
   return {
     requestPermission,
     scheduleMealReminders,

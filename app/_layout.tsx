@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen'; // ← 1. IMPORT EKLENDİ
 
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -11,9 +10,10 @@ import {
   Nunito_700Bold,
   Nunito_800ExtraBold
 } from "@expo-google-fonts/nunito";
-import { initDB } from "../db";
+import { getDB, initDB } from "../db";
 import { clearCalorieCache } from "@/db/queries/cache";
-
+const isExpoGo = require('expo-constants').default.appOwnership === 'expo';
+const Notifications = isExpoGo ? null : require('expo-notifications');
 // ← 2. COMPONENT DIŞINDA — splash'i hazır olana kadar tut
 SplashScreen.preventAutoHideAsync();
 
@@ -49,6 +49,9 @@ export default function RootLayout() {
     async function init() {
       try {
         await initDB()
+        console.log('[Init] DB ready')
+        // initDB()'den hemen sonra ekle, test bitince kaldır
+        const db = getDB()
 
         const { useUserStore } = await import("@/stores/userStore")
         const { useRecipesStore } = await import("@/stores/recipesStore")
@@ -56,6 +59,7 @@ export default function RootLayout() {
 
         await useUserStore.getState().loadUser()
         setUserLoaded(true)
+        console.log('[Init] User loaded:', useUserStore.getState().onboardingCompleted)
 
         await useRecipesStore.getState().loadRecipes()
         await useRecipesStore.getState().loadIngredients()

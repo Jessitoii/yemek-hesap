@@ -17,7 +17,7 @@ export async function getDB(): Promise<SQLite.SQLiteDatabase> {
  */
 export async function runMigrations() {
   const db = await getDB();
-  
+
   // Create migrations table if not exists
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS migrations (

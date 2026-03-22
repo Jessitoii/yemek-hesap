@@ -43,6 +43,16 @@ export default function ProfileEditScreen() {
     loadProfilePhoto();
   }, []);
 
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setGender(profile.gender || Gender.MALE);
+      setAge(profile.age?.toString() || '');
+      setHeight(profile.height?.toString() || '');
+      setWeight(profile.weight?.toString() || '');
+    }
+  }, [profile]);
+
   const loadProfilePhoto = async () => {
     try {
       const storedPhoto = await AsyncStorage.getItem(PHOTO_KEY);
@@ -113,7 +123,7 @@ export default function ProfileEditScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
@@ -161,10 +171,10 @@ export default function ProfileEditScreen() {
                 ]}
                 onPress={() => setGender(Gender.MALE)}
               >
-                <Ionicons 
-                  name="male" 
-                  size={20} 
-                  color={gender === Gender.MALE ? colors.textOnPrimary : colors.textSecondary} 
+                <Ionicons
+                  name="male"
+                  size={20}
+                  color={gender === Gender.MALE ? colors.textOnPrimary : colors.textSecondary}
                 />
                 <Text style={[
                   styles.genderText,
@@ -179,10 +189,10 @@ export default function ProfileEditScreen() {
                 ]}
                 onPress={() => setGender(Gender.FEMALE)}
               >
-                <Ionicons 
-                  name="female" 
-                  size={20} 
-                  color={gender === Gender.FEMALE ? colors.textOnPrimary : colors.textSecondary} 
+                <Ionicons
+                  name="female"
+                  size={20}
+                  color={gender === Gender.FEMALE ? colors.textOnPrimary : colors.textSecondary}
                 />
                 <Text style={[
                   styles.genderText,
@@ -233,7 +243,7 @@ export default function ProfileEditScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

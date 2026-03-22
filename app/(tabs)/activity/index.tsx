@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { colors } from "../../../constants/colors";
 import { typography } from "../../../constants/typography";
 import { shadow } from "../../../constants/theme";
@@ -15,7 +15,7 @@ import { useDailyStore } from '../../../stores/dailyStore';
 import { usePedometer } from '../../../hooks/usePedometer';
 
 export default function ActivityScreen() {
-  const { profile, goals } = useUserStore();
+  const { profile, goals, isLoading } = useUserStore();
   const { exercises, streak, loadActivity, deleteExercise, updateSteps } = useActivityStore();
   const todayLog = useDailyStore(state => state.todayLog);
   const { steps: pedometerSteps, isAvailable: pedometerAvailable } = usePedometer();
@@ -53,7 +53,11 @@ export default function ActivityScreen() {
     if (stepsSource === 'Health Connect') return; // Health Connect varsa dokunma
     updateSteps(pedometerSteps);
   }, [pedometerSteps]);
-
+  if (isLoading) return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+  );
   // ─── Profil eksikse yönlendir ───────────────────────────────────────────
   const isProfileIncomplete = !profile?.weight || !profile?.height;
   if (isProfileIncomplete) {
@@ -106,7 +110,7 @@ export default function ActivityScreen() {
             <MaterialCommunityIcons name="lightbulb-outline" size={20} color={colors.primaryDark} style={{ marginRight: 8 }} />
             <Text style={styles.healthConnectText}>
               Gün başından itibaren adımlarını görmek için Profil {'>'} Sağlık Uygulaması bölümünden Health Connect'i bağla.{' '}
-              <Text 
+              <Text
                 style={styles.healthConnectLink}
                 onPress={() => router.push('/(tabs)/profile')}
               >
@@ -191,5 +195,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontBold,
     color: colors.primary,
     textDecorationLine: 'underline',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
   },
 });

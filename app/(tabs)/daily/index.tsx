@@ -228,6 +228,8 @@ export default function DailyScreen() {
         </View>
 
         <View style={{ height: 100 }} />
+
+
       </ScrollView>
     </View>
   );
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
   },
   waterCard: {
     padding: spacing.md,
-    marginTop: spacing.md,
+    marginBottom: spacing.md,
   },
   waterHeader: {
     flexDirection: 'row',
