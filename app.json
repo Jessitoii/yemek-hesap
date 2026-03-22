@@ -24,6 +24,8 @@
     "android": {
       "minSdkVersion": 26,
       "targetSdkVersion": 36,
+      "compileSdkVersion": 36,
+      "buildToolsVersion": "36.0.0",
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACTIVITY_RECOGNITION",
@@ -64,6 +66,14 @@
             "ExerciseSessionRecord",
             "TotalCaloriesBurnedRecord"
           ]
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ],
       "@react-native-community/datetimepicker"
