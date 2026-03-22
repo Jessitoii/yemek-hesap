@@ -2,6 +2,7 @@
   "expo": {
     "name": "Yemek Hesap",
     "slug": "YemekHesap",
+    "scheme": "yemekhesap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,6 +22,15 @@
       }
     },
     "android": {
+      "minSdkVersion": 26,
+      "targetSdkVersion": 36,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED"
+      ],
       "splash": {
         "image": "./assets/splash.png",
         "resizeMode": "contain",
@@ -62,7 +72,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/fb118ed3-ee3b-4602-99af-3227c685b02f"
+      "url": "https://u.expo.dev/36ae6de0-c605-4076-9ba8-be08506ede26"
     },
     "extra": {
       "eas": {
