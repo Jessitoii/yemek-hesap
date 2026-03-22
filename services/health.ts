@@ -31,8 +31,18 @@ export async function requestHealthPermissions(): Promise<boolean> {
       const hc = await getHealthConnect();
       if (!hc) return false;
 
-      await hc.initialize();
-
+      const isInitialized = await hc.initialize();
+      if (!isInitialized) {
+        console.warn('[Health] Health Connect initialize edilemedi');
+        return false;
+      }
+      // Mevcut izinleri kontrol et, zaten varsa tekrar isteme
+      const existing = await hc.getGrantedPermissions();
+      const hasSteps = existing.some(
+        (p: { recordType: string; accessType: string }) =>
+          p.recordType === 'Steps' && p.accessType === 'read'
+      );
+      if (hasSteps) return true;
       await hc.requestPermission([
         { accessType: 'read', recordType: 'Steps' },
         { accessType: 'read', recordType: 'ExerciseSession' },
