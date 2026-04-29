@@ -4,6 +4,8 @@ A Turkish mobile app for real-time **meal cost + calorie tracking** using live M
 
 > 🎉 **Now available on Google Play — currently in closed testing.**
 
+Link: https://play.google.com/apps/testing/com.jessitoi.yemekhesap/join
+
 ---
 
 ## What Does It Do?
