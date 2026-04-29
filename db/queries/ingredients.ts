@@ -36,7 +36,7 @@ export async function saveIngredient(ingredient: Ingredient): Promise<void> {
       nutrition_source, migros_price_kurus, migros_price_updated_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
     ingredient.id,
-    ingredient.name,
+    ingredient.name || 'Bilinmeyen Malzeme',
     ingredient.imageUrl ?? null,
     ingredient.custom ? 'user' : 'themealdb',
     ingredient.custom ? 1 : 0,

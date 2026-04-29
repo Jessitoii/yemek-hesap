@@ -7,26 +7,41 @@ import { colors } from '@/constants/colors';
 import { spacing, radius } from '@/constants/theme';
 import { typography } from '@/constants/typography';
 import { useRecipesStore } from '@/stores/recipesStore';
+import { IngredientCalcState } from '@/hooks/useRecipeCalculation';
+import { SkeletonRow } from '../ui/SkeletonRow';
 
 interface IngredientRowProps {
-  ingredient: RecipeIngredient;
+  ingredient: RecipeIngredient | { name: string; amount: string; unit: string; grams: number };
+  calcState?: IngredientCalcState;
   onPress?: () => void;
 }
 
-export function IngredientRow({ ingredient, onPress }: IngredientRowProps) {
+export function IngredientRow({ ingredient, calcState, onPress }: IngredientRowProps) {
   // Find full ingredient data from store
   const allIngredients = useRecipesStore((state) => state.ingredients);
-  const detail = allIngredients.find(i => i.id === ingredient.ingredientId);
+  const detail = allIngredients.find(i => i.id === (ingredient as any).ingredientId);
 
-  // Calculate calories and cost for the specific amount
-  // nutrition: calories per 100g (usually)
-  const calories = detail 
-    ? Math.round((detail.nutrition.calories * ingredient.grams) / 100) 
-    : 0;
+  const isPending = calcState?.status === 'pending' || calcState?.status === 'calculating';
   
-  const cost = detail && detail.lastKnownPrice 
-    ? ((detail.lastKnownPrice * ingredient.grams) / (detail.nutrition.servingSize || 100)).toFixed(2)
-    : '0.00';
+  // Use calcState values if available, otherwise fallback to store/ingredient props
+  const name = calcState?.nameTr || calcState?.nameEn || (ingredient as any).name || detail?.name;
+  const quantity = calcState 
+    ? `${calcState.measure} ${calcState.grams ? `(${Math.round(calcState.grams)}g)` : ''}`
+    : `${(ingredient as any).amount} ${(ingredient as any).unit} (${(ingredient as any).grams}g)`;
+
+  const calories = calcState?.status === 'done'
+    ? Math.round(calcState.calories || 0)
+    : detail 
+      ? Math.round((detail.nutrition.calories * (ingredient as any).grams) / 100) 
+      : 0;
+  
+  const cost = calcState?.status === 'done'
+    ? (calcState.costTL || 0).toFixed(2)
+    : detail && detail.lastKnownPrice 
+      ? ((detail.lastKnownPrice * (ingredient as any).grams) / (detail.nutrition.servingSize || 100)).toFixed(2)
+      : '0.00';
+
+  const imageUrl = calcState?.migrosProduct?.imageUrl || detail?.imageUrl;
 
   return (
     <TouchableOpacity 
@@ -36,9 +51,11 @@ export function IngredientRow({ ingredient, onPress }: IngredientRowProps) {
       activeOpacity={0.7}
     >
       <View style={styles.imageBox}>
-        {detail?.imageUrl ? (
+        {isPending ? (
+          <SkeletonRow width="100%" height="100%" />
+        ) : imageUrl ? (
           <Image 
-            source={{ uri: detail.imageUrl.startsWith('//') ? `https:${detail.imageUrl}` : detail.imageUrl }} 
+            source={{ uri: imageUrl.startsWith('//') ? `https:${imageUrl}` : imageUrl }} 
             style={styles.image} 
           />
         ) : (
@@ -49,15 +66,33 @@ export function IngredientRow({ ingredient, onPress }: IngredientRowProps) {
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{ingredient.name || detail?.name}</Text>
-        <Text style={styles.quantity}>
-          {ingredient.amount} {ingredient.unit} ({ingredient.grams}g)
-        </Text>
+        {isPending ? (
+          <>
+            <SkeletonRow width="60%" height={16} style={{ marginBottom: 4 }} />
+            <SkeletonRow width="40%" height={12} />
+          </>
+        ) : (
+          <>
+            <Text style={styles.name} numberOfLines={1}>{name}</Text>
+            <Text style={styles.quantity}>{quantity}</Text>
+          </>
+        )}
       </View>
 
       <View style={styles.stats}>
-        <Text style={styles.calories}>{calories} kcal</Text>
-        <Text style={styles.cost}>₺{cost}</Text>
+        {isPending ? (
+          <>
+            <SkeletonRow width={50} height={14} style={{ marginBottom: 4 }} />
+            <SkeletonRow width={40} height={14} />
+          </>
+        ) : calcState?.requiresManualInput ? (
+          <Text style={styles.manualInput}>Miktar girin</Text>
+        ) : (
+          <>
+            <Text style={styles.calories}>{calories} kcal</Text>
+            <Text style={styles.cost}>₺{cost}</Text>
+          </>
+        )}
       </View>
 
       {onPress && (
@@ -130,5 +165,11 @@ const styles = StyleSheet.create({
   },
   action: {
     marginLeft: 4,
+  },
+  manualInput: {
+    fontFamily: typography.fontSemiBold,
+    fontSize: 12,
+    color: colors.primary,
+    textAlign: 'right',
   },
 });

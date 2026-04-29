@@ -101,6 +101,21 @@ export default function RootLayout() {
   // if (!fontsLoaded && !fontError) return null;  // artık gerekmiyor
   // if (!dbReady) return null;                    // artık gerekmiyor
 
+  useEffect(() => {
+    if (isExpoGo || !Notifications) return;
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
+      const { data } = response.notification.request.content;
+      if (data?.recipeId) {
+        router.push(`/(tabs)/recipes/${data.recipeId}`);
+      } else if (data?.recipeName) {
+        router.push(`/(tabs)/recipes`);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />

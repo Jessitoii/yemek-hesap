@@ -8,18 +8,20 @@ import {
   ActivityIndicator,
   LayoutAnimation,
   Platform,
-  UIManager
+  UIManager,
+  Alert
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  ArrowsClockwise,
-  BookOpen,
   Plus,
   PencilSimple,
   CaretDown,
-  CaretUp
+  CaretUp,
+  ArrowsClockwise,
+  BookOpen
 } from 'phosphor-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRecipesStore } from '@/stores/recipesStore';
 import { RecipeDetailHeader } from '@/components/recipes/RecipeDetailHeader';
@@ -30,6 +32,9 @@ import { Button } from '@/components/ui/Button';
 import { colors } from '@/constants/colors';
 import { spacing, radius, shadow } from '@/constants/theme';
 import { typography } from '@/constants/typography';
+import { useRecipeCalculation } from '@/hooks/useRecipeCalculation';
+import { useDailyStore } from '@/stores/dailyStore';
+import { MealType } from '@/types/daily';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -39,11 +44,26 @@ export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { recipes, loadRecipes, updateRecipe, loadIngredients, ingredients: allStoreIngredients } = useRecipesStore();
+  const { addMeal } = useDailyStore();
+  const insets = useSafeAreaInsets();
+
+  const recipe = useMemo(() => recipes.find(r => r.id === id), [recipes, id]);
 
   const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
   const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(true);
+  const [addedMealId, setAddedMealId] = useState<string | null>(null);
 
-  const recipe = useMemo(() => recipes.find(r => r.id === id), [recipes, id]);
+  // Performance Fix: Only calculate if it's a TheMealDB recipe AND has no calories/cost yet, 
+  // or if the user explicitly triggered a price update.
+  const shouldCalculate = recipe?.source === 'TheMealDB' && (isUpdatingPrices || !recipe.totalCalories || recipe.totalCalories === 0);
+
+  const calc = useRecipeCalculation(
+    shouldCalculate ? recipe?.name || '' : '',
+    shouldCalculate ? recipe?.ingredients?.map(i => ({ 
+      nameEn: i.name, 
+      measure: `${i.amount} ${i.unit}` 
+    })) || [] : []
+  );
 
   useEffect(() => {
     if (recipes.length === 0) {
@@ -51,6 +71,24 @@ export default function RecipeDetailScreen() {
     }
     loadIngredients();
   }, []);
+
+  // Sync meal data when calculation reaches 100%
+  useEffect(() => {
+    if (calc.isComplete && addedMealId) {
+      const { updateMeal } = useDailyStore.getState();
+      updateMeal(addedMealId, {
+        calories: calc.totalCalories || 0,
+        cost: calc.totalCost || 0,
+        macros: {
+          protein: calc.totalProtein || 0,
+          carbs: calc.totalCarbs || 0,
+          fat: calc.totalFat || 0
+        }
+      }).then(() => {
+        setAddedMealId(null);
+      });
+    }
+  }, [calc.isComplete, addedMealId, calc.totalCalories, calc.totalCost, calc.totalProtein, calc.totalCarbs, calc.totalFat]);
 
   const handleUpdatePrices = async () => {
     setIsUpdatingPrices(true);
@@ -78,7 +116,16 @@ export default function RecipeDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <RecipeDetailHeader recipe={recipe} />
+        <RecipeDetailHeader 
+          recipe={{
+            ...recipe,
+            totalCalories: recipe.source === 'TheMealDB' ? calc.totalCalories : recipe.totalCalories,
+            totalCost: recipe.source === 'TheMealDB' ? calc.totalCost : recipe.totalCost,
+          }}
+          isComplete={recipe.source === 'TheMealDB' ? calc.isComplete : true}
+          completedCount={calc.completedCount}
+          totalCount={calc.totalCount}
+        />
 
         <View style={styles.content}>
           {/* Macro Summary Section */}
@@ -112,10 +159,11 @@ export default function RecipeDetailScreen() {
             </View>
 
             <View style={styles.ingredientsList}>
-              {recipe.ingredients.map((ing) => (
+              {recipe.ingredients.map((ing, idx) => (
                 <IngredientRow
                   key={ing.ingredientId}
                   ingredient={ing}
+                  calcState={recipe.source === 'TheMealDB' ? calc.ingredients[idx] : undefined}
                   onPress={() => router.push({
                     pathname: `/(tabs)/recipes/my-ingredients/${ing.ingredientId}`,
                     params: {
@@ -172,7 +220,7 @@ export default function RecipeDetailScreen() {
       </ScrollView>
 
       {/* Footer Actions */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <Button
           label="Düzenle"
           variant="outline"
@@ -184,13 +232,33 @@ export default function RecipeDetailScreen() {
           label="Günlüğe Ekle"
           style={styles.addBtn}
           leftIcon={<Plus size={20} color="white" weight="bold" />}
-          onPress={() => router.push({
-            pathname: '/(tabs)/daily/add-meal',
-            params: { recipeId: recipe.id }
-          })}
+          onPress={async () => {
+             const calories = shouldCalculate ? (calc.totalCalories || 0) : recipe.totalCalories;
+             const cost = shouldCalculate ? (calc.totalCost || 0) : recipe.totalCost;
+             
+             const mealId = await addMeal({
+               type: MealType.LUNCH,
+               recipeId: recipe.id,
+               name: recipe.name,
+               imageUrl: recipe.imageUrl,
+               amount: 1,
+               unit: 'porsiyon',
+               grams: recipe.ingredients.reduce((acc, i) => acc + (i.grams || 0), 0),
+               calories,
+               cost,
+               macros: {
+                 protein: recipe.macros.protein,
+                 carbs: recipe.macros.carbs,
+                 fat: recipe.macros.fat
+               }
+             });
+             
+             if (mealId) setAddedMealId(mealId);
+
+             Alert.alert('Başarılı', 'Öğün günlüğe eklendi.');
+          }}
         />
       </View>
-
     </View>
   );
 }
@@ -276,7 +344,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surface,
     padding: spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
     gap: spacing.md,

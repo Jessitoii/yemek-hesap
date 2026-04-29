@@ -1,18 +1,20 @@
-# KaloriTabak 🍽️
+# Yemek Hesap 🍽️
 
 A Turkish mobile app for real-time **meal cost + calorie tracking** using live Migros grocery prices.
+
+> 🎉 **Now available on Google Play — currently in closed testing.**
 
 ---
 
 ## What Does It Do?
 
-KaloriTabak calculates both the calorie content and the real-time cost (based on current Migros prices) of your meals. Daily meal tracking, exercise logging, weekly charts, and smart recipe suggestions — all in one app.
+Yemek Hesap calculates both the calorie content and the real-time cost (based on current Migros prices) of your meals. Daily meal tracking, exercise logging, weekly charts, and smart recipe suggestions — all in one app.
 
 ---
 
-## Why KaloriTabak?
+## Why Yemek Hesap?
 
-There are dozens of calorie-tracking apps on the market. But none of them combine **cost + calorie balance** simultaneously, localized for Turkey, in Turkish, with real-time price fetching. KaloriTabak fills this gap.
+There are dozens of calorie-tracking apps on the market. But none of them combine **cost + calorie balance** simultaneously, localized for Turkey, in Turkish, with real-time price fetching. Yemek Hesap fills this gap.
 
 **Target audience:**
 - Students who work out (budget + macro balance)
@@ -71,6 +73,16 @@ All data is stored locally on the user's device in SQLite. External APIs are use
 
 ---
 
+## Distribution
+
+| Platform | Status |
+|---|---|
+| Google Play | Closed testing |
+| Package name | `com.jessitoi.yemekhesap` |
+| EAS Project | `@jessitoi/YemekHesap` |
+
+---
+
 ## Documentation
 
 | File | Content |
@@ -91,8 +103,8 @@ All data is stored locally on the user's device in SQLite. External APIs are use
 
 ```bash
 # Create project
-npx create-expo-app kalori-tabak
-cd kalori-tabak
+npx create-expo-app yemek-hesap
+cd yemek-hesap
 
 # Install dependencies
 npx expo install expo-router expo-sqlite expo-notifications expo-pedometer

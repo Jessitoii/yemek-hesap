@@ -8,6 +8,7 @@ import { typography } from '@/constants/typography';
 import { FavoriteButton } from './FavoriteButton';
 import { Badge } from '@/components/ui/Badge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 interface RecipeDetailHeaderProps {
   recipe: {
@@ -17,22 +18,27 @@ interface RecipeDetailHeaderProps {
     cuisine?: string;
     source?: string;
     isFavorite: boolean;
-    totalCalories: number;
-    totalCost: number;
+    totalCalories: number | null;
+    totalCost: number | null;
     servings: number;
   };
+  isComplete?: boolean;
+  completedCount?: number;
+  totalCount?: number;
 }
 
-export function RecipeDetailHeader({ recipe }: RecipeDetailHeaderProps) {
+export function RecipeDetailHeader({ recipe, isComplete = true, completedCount = 0, totalCount = 0 }: RecipeDetailHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const perServingCalories = Math.round(recipe.totalCalories / recipe.servings);
-  const perServingCost = (recipe.totalCost / recipe.servings).toFixed(2);
+  const perServingCalories = recipe.totalCalories ? Math.round(recipe.totalCalories / recipe.servings) : null;
+  const perServingCost = recipe.totalCost ? (recipe.totalCost / recipe.servings).toFixed(2) : null;
 
   const handleShare = async () => {
+    const calStr = recipe.totalCalories ? `${Math.round(recipe.totalCalories)} kcal` : '---';
+    const costStr = recipe.totalCost ? `₺${recipe.totalCost.toFixed(2)}` : '---';
     await Share.share({
-      message: `${recipe.name}\n\n🔥 ${Math.round(recipe.totalCalories)} kcal | ₺${recipe.totalCost.toFixed(2)}\n👥 ${recipe.servings} porsiyon\n\nKaloriTabak uygulamasından paylaşıldı.`,
+      message: `${recipe.name}\n\n🔥 ${calStr} | ${costStr}\n👥 ${recipe.servings} porsiyon\n\nKaloriTabak uygulamasından paylaşıldı.`,
       title: recipe.name,
     });
   };
@@ -87,7 +93,11 @@ export function RecipeDetailHeader({ recipe }: RecipeDetailHeaderProps) {
           <View style={styles.statItem}>
             <Flame size={20} color={colors.accentDark} weight="fill" />
             <View>
-              <Text style={styles.statVal}>{recipe.totalCalories.toFixed(2)} kcal</Text>
+              {recipe.totalCalories !== null ? (
+                <Text style={styles.statVal}>{recipe.totalCalories.toFixed(0)} kcal</Text>
+              ) : (
+                <SkeletonRow width={60} height={14} style={{ marginVertical: 2 }} />
+              )}
               <Text style={styles.statLabel}>Toplam Kalori</Text>
             </View>
           </View>
@@ -95,7 +105,11 @@ export function RecipeDetailHeader({ recipe }: RecipeDetailHeaderProps) {
           <View style={styles.statItem}>
             <CreditCard size={20} color={colors.secondaryDark} weight="fill" />
             <View>
-              <Text style={styles.statVal}>₺{recipe.totalCost.toFixed(2)}</Text>
+              {recipe.totalCost !== null ? (
+                <Text style={styles.statVal}>₺{recipe.totalCost.toFixed(2)}</Text>
+              ) : (
+                <SkeletonRow width={60} height={14} style={{ marginVertical: 2 }} />
+              )}
               <Text style={styles.statLabel}>Toplam Maliyet</Text>
             </View>
           </View>
@@ -109,10 +123,31 @@ export function RecipeDetailHeader({ recipe }: RecipeDetailHeaderProps) {
           </View>
         </View>
 
+        {!isComplete && totalCount > 0 && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressLabel}>Tarif hesaplanıyor...</Text>
+              <Text style={styles.progressText}>{completedCount}/{totalCount} malzeme</Text>
+            </View>
+            <View style={styles.progressBarBg}>
+              <View 
+                style={[
+                  styles.progressBarFill, 
+                  { width: `${(completedCount / totalCount) * 100}%` }
+                ]} 
+              />
+            </View>
+          </View>
+        )}
+
         <View style={styles.perServingContainer}>
-          <Text style={styles.perServingText}>
-            Porsiyon başı ortalama <Text style={styles.bold}>{perServingCalories} kcal</Text> ve <Text style={styles.bold}>₺{perServingCost}</Text>
-          </Text>
+          {perServingCalories !== null && perServingCost !== null ? (
+            <Text style={styles.perServingText}>
+              Porsiyon başı ortalama <Text style={styles.bold}>{perServingCalories} kcal</Text> ve <Text style={styles.bold}>₺{perServingCost}</Text>
+            </Text>
+          ) : (
+            <SkeletonRow width="80%" height={14} />
+          )}
         </View>
       </View>
     </View>
@@ -237,5 +272,34 @@ const styles = StyleSheet.create({
   bold: {
     fontFamily: typography.fontBold,
     color: colors.textPrimary,
+  },
+  progressContainer: {
+    marginBottom: spacing.md,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  progressLabel: {
+    fontFamily: typography.fontSemiBold,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  progressText: {
+    fontFamily: typography.fontBold,
+    fontSize: 12,
+    color: colors.primary,
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: colors.borderLight,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
   },
 });

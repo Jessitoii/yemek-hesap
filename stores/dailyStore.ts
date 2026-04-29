@@ -17,7 +17,8 @@ interface DailyState {
   // Actions
   setSelectedDate: (date: string) => void;
   loadLog: (date: string) => Promise<void>;
-  addMeal: (meal: Omit<Meal, 'id' | 'dailyLogId' | 'time'>, date?: string) => Promise<void>;
+  addMeal: (meal: Omit<Meal, 'id' | 'dailyLogId' | 'time'>, date?: string) => Promise<string | undefined>;
+  updateMeal: (id: string, updates: Partial<Meal>) => Promise<void>;
   deleteMeal: (id: string) => Promise<void>;
   addWater: (ml: number) => Promise<void>;
   updateSuggestion: () => void;
@@ -63,9 +64,10 @@ export const useDailyStore = create<DailyState>((set, get) => ({
     if (!log) return;
 
     try {
+      const mealId = generateId();
       const newMeal: Meal = {
         ...(mealData as any),
-        id: generateId(),
+        id: mealId,
         dailyLogId: log.id,
         time: new Date(),
       };
@@ -85,9 +87,24 @@ export const useDailyStore = create<DailyState>((set, get) => ({
           triggerCalorieAlert(currentLog.totalCalories, userGoals.dailyCalorieTarget);
         }
       }
+      return mealId;
 
     } catch (error) {
       console.error('[DailyStore] Error adding meal:', error);
+    }
+  },
+
+  updateMeal: async (id, updates) => {
+    const log = get().todayLog;
+    if (!log) return;
+
+    try {
+      const { updateMeal: updateMealQuery } = await import('@/db/queries/meals');
+      await updateMealQuery(id, updates);
+      await updateLogTotals(log.id);
+      await get().loadLog(get().selectedDate);
+    } catch (error) {
+      console.error('[DailyStore] Error updating meal:', error);
     }
   },
 

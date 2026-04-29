@@ -260,6 +260,40 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
   }
 }
 
+export async function triggerRecipeCalculatedNotification({
+  recipeName,
+  totalCalories,
+  totalCost,
+  recipeId,
+}: {
+  recipeName: string;
+  totalCalories: number | null;
+  totalCost: number | null;
+  recipeId?: string;
+}) {
+  if (isExpoGo) {
+    console.warn('[Notifications] Recipe calculated notification skipped in Expo Go.');
+    return;
+  }
+
+  const calStr = totalCalories ? `${Math.round(totalCalories)} kcal` : 'Kalori hesaplanamadı';
+  const costStr = totalCost ? `₺${totalCost.toFixed(2)}` : 'Fiyat hesaplanamadı';
+
+  try {
+    if (!Notifications) return;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `✅ "${recipeName}" hesaplandı`,
+        body: `${calStr} · ${costStr} — Detaylar için dokunun.`,
+        data: { recipeName, recipeId },
+      },
+      trigger: null,
+    });
+  } catch (error) {
+    console.warn('[Notifications] triggerRecipeCalculatedNotification failed:', error);
+  }
+}
+
 export async function cancelAll() {
   try {
     if (!Notifications) return;
@@ -297,6 +331,7 @@ export function useNotifications() {
       scheduleStreakWarning: async () => { },
       scheduleWeeklySummary: async () => { },
       triggerCalorieAlert: async () => { },
+      triggerRecipeCalculatedNotification: async () => { },
       scheduleAll: async () => { },
       cancelAll: async () => { },
     };
@@ -308,6 +343,7 @@ export function useNotifications() {
     scheduleStreakWarning,
     scheduleWeeklySummary,
     triggerCalorieAlert,
+    triggerRecipeCalculatedNotification,
     scheduleAll,
     cancelAll,
   };

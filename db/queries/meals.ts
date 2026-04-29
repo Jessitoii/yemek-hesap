@@ -14,6 +14,27 @@ export async function addMeal(meal: Meal): Promise<void> {
   );
 }
 
+export async function updateMeal(id: string, updates: Partial<Meal>): Promise<void> {
+  const db = await getDB();
+  const sets: string[] = [];
+  const params: any[] = [];
+
+  if (updates.name !== undefined) { sets.push('custom_name = ?'); params.push(updates.name); }
+  if (updates.calories !== undefined) { sets.push('calories = ?'); params.push(updates.calories); }
+  if (updates.cost !== undefined) { sets.push('cost_tl = ?'); params.push(updates.cost); }
+  
+  if (updates.macros) {
+    if (updates.macros.protein !== undefined) { sets.push('protein_g = ?'); params.push(updates.macros.protein); }
+    if (updates.macros.carbs !== undefined) { sets.push('carbs_g = ?'); params.push(updates.macros.carbs); }
+    if (updates.macros.fat !== undefined) { sets.push('fat_g = ?'); params.push(updates.macros.fat); }
+  }
+
+  if (sets.length === 0) return;
+
+  params.push(id);
+  await db.runAsync(`UPDATE meals SET ${sets.join(', ')} WHERE id = ?`, ...params);
+}
+
 export async function deleteMeal(id: string): Promise<void> {
   const db = await getDB();
   await db.runAsync('DELETE FROM meals WHERE id = ?', id);

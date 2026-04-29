@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Alert
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Plus,
   ArrowLeft,
@@ -24,195 +23,92 @@ import {
 } from 'phosphor-react-native';
 
 import { useRecipesStore } from '@/stores/recipesStore';
-import { useTranslate } from '@/hooks/useTranslate';
-import { useNutrition } from '@/hooks/useNutrition';
+import { useDailyStore } from '@/stores/dailyStore';
+import { translateToTurkish, translateLongText } from '@/services/mymemory';
 import { getRecipeById } from '@/services/themealdb';
-import { searchMigrosProducts } from '@/services/migros';
-import { extractIngredientName } from '@/utils/formatters';
-import { parseMeasure, toGrams, parseProductGrams } from '@/utils/unitConverter';
+import { useRecipeCalculation } from '@/hooks/useRecipeCalculation';
 import { Button } from '@/components/ui/Button';
+import { MealType } from '@/types/daily';
 import { colors } from '@/constants/colors';
 import { spacing, radius, shadow } from '@/constants/theme';
 import { typography } from '@/constants/typography';
 import { RecipeDetailHeader } from '@/components/recipes/RecipeDetailHeader';
+import { IngredientRow } from '@/components/recipes/IngredientRow';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const scoreMigrosMatch = (product: any, query: string, unit: string, amount: number) => {
-  let score = 0;
-  const productName = product.name.toLowerCase();
-  const q = query.toLowerCase();
-
-  // 1. İsim Benzerliği
-  if (productName === q) score += 100;
-  else if (productName.includes(q)) score += 50;
-
-  // 2. Birim Uyumu
-  const targetUnitLower = (unit || '').toLowerCase();
-  if (targetUnitLower === 'gram' || targetUnitLower === 'gr' || targetUnitLower === 'kg') {
-    if (productName.includes(' g') || productName.includes(' gr') || productName.includes('kg')) {
-      score += 30;
-    }
-  } else if (targetUnitLower === 'adet' || targetUnitLower === 'tane') {
-    if (productName.includes(' adet') || productName.includes(' tane')) {
-      score += 30;
-    }
-  }
-
-  // 3. Kelime bazlı eşleşme
-  const keywords = q.split(' ');
-  keywords.forEach(kw => {
-    if (kw.length > 2 && productName.includes(kw)) score += 20;
-  });
-
-  return score;
-};
-
 export default function DiscoverRecipeDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { addRecipe, addIngredient, ingredients: allIngredients } = useRecipesStore();
-  const { translate, translateLongText } = useTranslate();
-  const { getNutrition } = useNutrition();
+  const { addRecipe, addIngredient } = useRecipesStore();
+  const { addMeal } = useDailyStore();
+  const { triggerRecipeCalculatedNotification } = useNotifications();
+  const insets = useSafeAreaInsets();
 
-  const [loading, setLoading] = useState(true);
+  const [isFetchingRecipe, setIsFetchingRecipe] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [recipe, setRecipe] = useState<any>(null);
+  const [nameTr, setNameTr] = useState<string>('');
+  const [instructionsTr, setInstructionsTr] = useState<string>('');
   const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(true);
+  const [addedMealId, setAddedMealId] = useState<string | null>(null);
 
+  // Step 1: Fetch TheMealDB data (Layer 1 - Fast)
   useEffect(() => {
-    fetchRecipe();
+    async function fetchBase() {
+      setIsFetchingRecipe(true);
+      try {
+        const data = await getRecipeById(id as string);
+        if (data) {
+          setRecipe(data);
+          setNameTr(data.name); // Default to EN first
+          setInstructionsTr(data.instructions); // Default to EN first
+          
+          // Layer 1.5: Translate main texts in background
+          translateToTurkish(data.name).then(setNameTr);
+          translateLongText(data.instructions).then(setInstructionsTr);
+        }
+      } catch (error) {
+        console.error('Fetch recipe error:', error);
+        Alert.alert('Hata', 'Tarif bilgileri yüklenemedi.');
+      } finally {
+        setIsFetchingRecipe(false);
+      }
+    }
+    fetchBase();
   }, [id]);
 
-  const calculateRecipePreview = async (ingredients: any[]) => {
-    let totalCalories = 0, totalCost = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
-    const ingredientList: any[] = [];
-
-    for (const raw of ingredients) {
-      try {
-        const nameTr = await translate(raw.nameEn);
-        const nameToSearch = (nameTr || raw.nameEn).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-        const { amount, unit } = parseMeasure(raw.measure);
-        const migrosMatches = await searchMigrosProducts(nameToSearch);
-        
-        const scored = migrosMatches
-          .map(p => ({ product: p, score: scoreMigrosMatch(p, nameToSearch, unit, amount) }))
-          .sort((a, b) => b.score - a.score);
-        
-        const bestMatch = scored.length > 0 && scored[0].score > 0 ? scored[0].product : undefined;
-
-        const nutrition = await getNutrition([
-          extractIngredientName(bestMatch?.name || nameToSearch),
-          bestMatch?.category || '',
-          bestMatch?.topCategory || ''
-        ]);
-
-        const productGrams = bestMatch ? parseProductGrams(bestMatch.name) : undefined;
-        const isKgProduct = bestMatch?.name?.toLowerCase().includes(' kg');
-        const gramsCount = toGrams(amount, unit, bestMatch?.name || nameToSearch, isKgProduct ? undefined : productGrams);
-        console.log(`[Preview] ${raw.nameEn} → ${nameToSearch} | bestMatch: ${bestMatch?.name} | grams: ${gramsCount} | cal: ${nutrition?.calories}`);
-
-        const ratio = gramsCount / 100;
-        totalCalories += (nutrition?.calories || 0) * ratio;
-        totalProtein += (nutrition?.protein || 0) * (nutrition?.protein ? ratio : 0);
-        totalCarbs += (nutrition?.carbs || 0) * (nutrition?.carbs ? ratio : 0);
-        totalFat += (nutrition?.fat || 0) * (nutrition?.fat ? ratio : 0);
-        totalCost += (bestMatch?.price || 0) * (gramsCount / 100);
-
-        ingredientList.push({
-          nameTr: nameToSearch,
-          measure: raw.measure,
-          grams: gramsCount,
-        });
-      } catch (e) {
-        console.warn('Error calculating preview for ingredient:', raw.nameEn, e);
-      }
-    }
-
-    return {
-      totalCalories,
-      totalCost,
-      macros: { protein: totalProtein, carbs: totalCarbs, fat: totalFat },
-      translatedIngredients: ingredientList
-    };
-  };
-
-  const fetchRecipe = async () => {
-    setLoading(true);
-    try {
-      const data = await getRecipeById(id as string);
-      if (data) {
-        // Translate title and instructions for display
-        const [nameTr, instructionsTr] = await Promise.all([
-          translate(data.name),
-          translateLongText(data.instructions)
-        ]);
-
-        const calculated = await calculateRecipePreview(data.ingredients);
-
-        setRecipe({
-          ...data,
-          nameTr: nameTr || data.name,
-          instructionsTr: instructionsTr || data.instructions,
-          totalCalories: calculated.totalCalories,
-          totalCost: calculated.totalCost,
-          macros: calculated.macros,
-          translatedIngredients: calculated.translatedIngredients,
-          servings: 4
-        });
-      }
-    } catch (error) {
-      console.error('Fetch recipe error:', error);
-      Alert.alert('Hata', 'Tarif bilgileri yüklenemedi.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Step 2: Background Calculation (Layer 2)
+  const calc = useRecipeCalculation(
+    recipe?.name || '',
+    recipe?.ingredients || []
+  );
 
   const handleAddToMyRecipes = async () => {
     if (!recipe) return;
     setProcessing(true);
     try {
+      // Save all resolved ingredients to store
       const draftingIngredients = [];
-      let totalCalories = 0;
-      let totalCost = 0;
-      let totalProtein = 0;
-      let totalCarbs = 0;
-      let totalFat = 0;
-
-      for (const raw of recipe.ingredients) {
-        const nameTr = await translate(raw.nameEn);
-        const nameToSearch = (nameTr || raw.nameEn).trim();
-        const { amount, unit } = parseMeasure(raw.measure);
+      
+      for (const [idx, ingState] of calc.ingredients.entries()) {
+        const ingId = ingState.migrosProduct?.id || `tmdb-${Math.random().toString(36).substr(2, 9)}`;
         
-        const migrosMatches = await searchMigrosProducts(nameToSearch);
-        const scored = migrosMatches
-          .map(p => ({ product: p, score: scoreMigrosMatch(p, nameToSearch, unit, amount) }))
-          .sort((a, b) => b.score - a.score);
-        const bestMatch = scored.length > 0 && scored[0].score > 0 ? scored[0].product : undefined;
-
-        const nutrition = await getNutrition([
-          extractIngredientName(bestMatch?.name || nameToSearch),
-          bestMatch?.category || '',
-          bestMatch?.topCategory || ''
-        ]);
-
-        const ingId = bestMatch?.id || Math.random().toString(36).substr(2, 9);
-
-        // Add to master ingredients if new
         await addIngredient({
           id: ingId,
-          name: bestMatch?.name || nameToSearch,
-          imageUrl: bestMatch?.imageUrl || undefined,
-          migrosProductId: bestMatch?.id,
-          lastKnownPrice: bestMatch?.price || 0,
+          name: ingState.nameTr || ingState.nameEn || 'Malzeme',
+          imageUrl: ingState.migrosProduct?.imageUrl || undefined,
+          migrosProductId: ingState.migrosProduct?.id,
+          lastKnownPrice: ingState.migrosProduct?.price || 0,
           nutrition: {
-            calories: nutrition?.calories || 0,
-            protein: nutrition?.protein || 0,
-            carbs: nutrition?.carbs || 0,
-            fat: nutrition?.fat || 0,
+            calories: (ingState.calories || 0) * (100 / (ingState.grams || 100)) || 0,
+            protein: (ingState.protein || 0) * (100 / (ingState.grams || 100)) || 0,
+            carbs: (ingState.carbs || 0) * (100 / (ingState.grams || 100)) || 0,
+            fat: (ingState.fat || 0) * (100 / (ingState.grams || 100)) || 0,
             servingSize: 100,
             unit: 'g'
           },
@@ -220,41 +116,31 @@ export default function DiscoverRecipeDetailScreen() {
           custom: false
         });
 
-        const productGrams = bestMatch ? parseProductGrams(bestMatch.name) : undefined;
-        const gramsCount = toGrams(amount, unit, bestMatch?.name || nameToSearch, productGrams);
-
-        const ratio = gramsCount / 100;
-        totalCalories += (nutrition?.calories || 0) * ratio;
-        totalProtein += (nutrition?.protein || 0) * (nutrition?.protein ? ratio : 0);
-        totalCarbs += (nutrition?.carbs || 0) * (nutrition?.carbs ? ratio : 0);
-        totalFat += (nutrition?.fat || 0) * (nutrition?.fat ? ratio : 0);
-        totalCost += (bestMatch?.price || 0) * (gramsCount / 100);
-
         draftingIngredients.push({
-          id: Math.random().toString(36).substr(2, 9),
+          id: `ri-${Math.random().toString(36).substr(2, 9)}`,
           recipeId: recipe.id,
           ingredientId: ingId,
-          name: bestMatch?.name || nameToSearch,
-          amount,
-          unit,
-          grams: gramsCount,
+          name: ingState.nameTr || ingState.nameEn || 'Malzeme',
+          amount: ingState.amount || 0,
+          unit: ingState.unit || '',
+          grams: ingState.grams || 0,
         });
       }
 
       await addRecipe({
         id: recipe.id,
-        name: recipe.nameTr,
+        name: nameTr || recipe.name,
         imageUrl: recipe.imageUrl,
         servings: 4,
         ingredients: draftingIngredients,
-        instructions: recipe.instructionsTr,
+        instructions: instructionsTr || recipe.instructions,
         source: 'TheMealDB',
-        totalCalories,
-        totalCost,
+        totalCalories: calc.totalCalories || 0,
+        totalCost: calc.totalCost || 0,
         macros: {
-          protein: totalProtein,
-          carbs: totalCarbs,
-          fat: totalFat
+          protein: calc.totalProtein || 0,
+          carbs: calc.totalCarbs || 0,
+          fat: calc.totalFat || 0
         },
         isFavorite: false,
         createdAt: new Date(),
@@ -272,11 +158,69 @@ export default function DiscoverRecipeDetailScreen() {
     }
   };
 
-  if (loading) {
+  const handleAddToLog = async () => {
+    if (!recipe) return;
+    
+    // If not complete, warning toast
+    if (!calc.isComplete) {
+      // Toast logic would go here if we had a toast provider
+      // For now, let's just proceed with partial values
+    }
+
+    try {
+      const mealId = await addMeal({
+        type: MealType.LUNCH,
+        recipeId: recipe.id,
+        name: nameTr || recipe.name,
+        imageUrl: recipe.imageUrl,
+        amount: 1,
+        unit: 'porsiyon',
+        grams: calc.ingredients.reduce((acc, i) => acc + (i.grams || 0), 0),
+        calories: calc.totalCalories || 0,
+        cost: calc.totalCost || 0,
+        macros: {
+          protein: calc.totalProtein || 0,
+          carbs: calc.totalCarbs || 0,
+          fat: calc.totalFat || 0
+        }
+      });
+
+      if (mealId) setAddedMealId(mealId);
+
+      Alert.alert('Başarılı', 'Öğün günlüğe eklendi. Tarif tam hesaplandığında değerler güncellenecektir.', [
+        { text: 'Tamam' }
+      ]);
+      
+      // Note: In a production app, we would register this meal ID to be updated 
+      // when calc.isComplete becomes true, even if the user leaves the screen.
+    } catch (error) {
+      console.error('Add meal error:', error);
+    }
+  };
+
+  // Sync meal data when calculation reaches 100%
+  useEffect(() => {
+    if (calc.isComplete && addedMealId) {
+      const { updateMeal } = useDailyStore.getState();
+      updateMeal(addedMealId, {
+        calories: calc.totalCalories || 0,
+        cost: calc.totalCost || 0,
+        macros: {
+          protein: calc.totalProtein || 0,
+          carbs: calc.totalCarbs || 0,
+          fat: calc.totalFat || 0
+        }
+      }).then(() => {
+        setAddedMealId(null); // Update complete, clear local ref
+      });
+    }
+  }, [calc.isComplete, addedMealId, calc.totalCalories, calc.totalCost, calc.totalProtein, calc.totalCarbs, calc.totalFat]);
+
+  if (isFetchingRecipe) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Tarif hazırlanıyor...</Text>
+        <Text style={styles.loadingText}>Tarif yükleniyor...</Text>
       </View>
     );
   }
@@ -292,15 +236,22 @@ export default function DiscoverRecipeDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        <RecipeDetailHeader recipe={{
-          ...recipe,
-          id: recipe.id,
-          name: recipe.nameTr,
-          imageUrl: recipe.imageUrl,
-          isFavorite: false,
-          cuisine: recipe.cuisine,
-          source: 'TheMealDB'
-        }} />
+        <RecipeDetailHeader 
+          recipe={{
+            ...recipe,
+            id: recipe.id,
+            name: nameTr || recipe.name,
+            totalCalories: calc.totalCalories,
+            totalCost: calc.totalCost,
+            servings: 4,
+            isFavorite: false,
+            cuisine: recipe.cuisine,
+            source: 'TheMealDB'
+          }}
+          isComplete={calc.isComplete}
+          completedCount={calc.completedCount}
+          totalCount={calc.totalCount}
+        />
 
         <View style={styles.content}>
           <View style={styles.infoBox}>
@@ -320,13 +271,17 @@ export default function DiscoverRecipeDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Malzemeler</Text>
             <View style={styles.ingredientList}>
-              {recipe.ingredients.map((ing: any, idx: number) => (
-                <View key={idx} style={styles.ingredientItem}>
-                  <Text style={styles.ingName}>
-                    {recipe.translatedIngredients?.[idx]?.nameTr || ing.nameEn}
-                  </Text>
-                  <Text style={styles.ingMeasure}>{ing.measure}</Text>
-                </View>
+              {calc.ingredients.map((ingState, idx) => (
+                <IngredientRow 
+                  key={idx} 
+                  ingredient={{
+                    name: ingState.nameTr || ingState.nameEn,
+                    amount: ingState.amount?.toString() || '',
+                    unit: ingState.unit || '',
+                    grams: ingState.grams || 0
+                  }}
+                  calcState={ingState}
+                />
               ))}
             </View>
           </View>
@@ -345,7 +300,7 @@ export default function DiscoverRecipeDetailScreen() {
 
             {isInstructionsExpanded && (
               <View style={styles.instructionsContainer}>
-                <Text style={styles.instructionsText}>{recipe.instructionsTr}</Text>
+                <Text style={styles.instructionsText}>{instructionsTr || recipe.instructions}</Text>
               </View>
             )}
           </View>
@@ -355,22 +310,22 @@ export default function DiscoverRecipeDetailScreen() {
       </ScrollView>
 
       {/* Footer Actions */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <Button
           label="Tariflerime Ekle"
+          variant="outline"
           style={styles.addRecipeBtn}
           loading={processing}
           disabled={processing}
-          leftIcon={<Plus size={20} color="white" weight="bold" />}
+          leftIcon={<Plus size={20} color={colors.primary} weight="bold" />}
           onPress={handleAddToMyRecipes}
         />
         <Button
           label="Günlüğe Ekle"
-          variant="outline"
           style={styles.addLogBtn}
-          disabled={processing}
-          leftIcon={<CalendarPlus size={20} color={colors.primary} weight="bold" />}
-          onPress={() => Alert.alert('İpucu', 'Bu tarifi günlüğe eklemek için önce tariflerinize kaydetmelisiniz.')}
+          disabled={processing || isFetchingRecipe}
+          leftIcon={<CalendarPlus size={20} color="white" weight="bold" />}
+          onPress={handleAddToLog}
         />
       </View>
     </View>
@@ -451,27 +406,9 @@ const styles = StyleSheet.create({
   ingredientList: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
-  },
-  ingredientItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  ingName: {
-    fontFamily: typography.fontMedium,
-    fontSize: 14,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  ingMeasure: {
-    fontFamily: typography.fontSemiBold,
-    fontSize: 14,
-    color: colors.primary,
   },
   collapsibleHeader: {
     flexDirection: 'row',
@@ -502,18 +439,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: spacing.lg,
+    padding: spacing.md,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
-    flexDirection: 'column',
-    gap: spacing.sm,
+    flexDirection: 'row',
+    gap: spacing.md,
     ...shadow.lg,
   },
   addRecipeBtn: {
-    width: '100%',
+    flex: 1,
   },
   addLogBtn: {
-    width: '100%',
+    flex: 1.2,
   },
 });
