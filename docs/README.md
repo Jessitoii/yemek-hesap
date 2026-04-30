@@ -1,10 +1,25 @@
 # Yemek Hesap 🍽️
 
-A Turkish mobile app for real-time **meal cost + calorie tracking** using live Migros grocery prices.
+<p align="center">
+  <img src="./screenshots/banner.png" alt="Yemek Hesap Banner" width="100%" />
+</p>
 
-> 🎉 **Now available on Google Play — currently in closed testing.**
+<p align="center">
+  A Turkish mobile app for real-time <strong>meal cost + calorie tracking</strong> using live Migros grocery prices.
+</p>
 
-Link: https://play.google.com/apps/testing/com.jessitoi.yemekhesap/join
+<p align="center">
+  <a href="https://play.google.com/apps/testing/com.jessitoi.yemekhesap/join">
+    <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Closed%20Testing-yellow?style=flat-square&logo=google-play" alt="Closed Testing" />
+  <img src="https://img.shields.io/badge/Platform-Android-green?style=flat-square&logo=android" alt="Android" />
+  <img src="https://img.shields.io/badge/Framework-Expo%20%2B%20React%20Native-blue?style=flat-square&logo=expo" alt="Expo" />
+  <img src="https://img.shields.io/badge/Backend-Zero%20%E2%80%94%20Fully%20Client--Side-lightgrey?style=flat-square" alt="Zero Backend" />
+</p>
 
 ---
 
