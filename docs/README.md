@@ -25,6 +25,16 @@ There are dozens of calorie-tracking apps on the market. But none of them combin
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="./screenshots/01-daily.jpeg" width="200" />
+  <img src="./screenshots/02-discover.png" width="200" />
+  <img src="./screenshots/03-recipe.jpg" width="200" />
+</p>
+
+---
+
 ## Core Features
 
 - 🛒 Recipe cost calculation using live Migros prices
