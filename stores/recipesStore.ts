@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Recipe, RecipeIngredient } from '@/types/recipe';
 import { Ingredient } from '@/types/ingredient';
 import { 
-  getRecipes, saveRecipe, deleteRecipe, toggleFavorite,
+  getRecipes, saveRecipe, deleteRecipeById, toggleFavorite,
 } from '@/db/queries/recipes';
 import { 
   getIngredients, saveIngredient, deleteIngredient 
@@ -10,6 +10,7 @@ import {
 
 interface RecipesState {
   recipes: Recipe[];
+  favorites: string[];
   ingredients: Ingredient[];
   isLoading: boolean;
 
@@ -33,6 +34,7 @@ interface RecipesState {
 
 export const useRecipesStore = create<RecipesState>((set, get) => ({
   recipes: [],
+  favorites: [],
   ingredients: [],
   isLoading: false,
   draftingIngredients: [],
@@ -47,7 +49,7 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
     set({ isLoading: true });
     try {
       const data = await getRecipes();
-      set({ recipes: data });
+      set({ recipes: data, favorites: data.filter(recipe => recipe.isFavorite).map(recipe => recipe.id) });
     } finally {
       set({ isLoading: false });
     }
@@ -55,31 +57,50 @@ export const useRecipesStore = create<RecipesState>((set, get) => ({
 
   addRecipe: async (recipe) => {
     await saveRecipe(recipe);
-    set(state => ({ recipes: [recipe, ...state.recipes] }));
+    set(state => ({
+      recipes: [recipe, ...state.recipes],
+      favorites: recipe.isFavorite && !state.favorites.includes(recipe.id)
+        ? [...state.favorites, recipe.id]
+        : state.favorites
+    }));
   },
 
   updateRecipe: async (recipe) => {
     await saveRecipe(recipe);
     set(state => ({
-      recipes: state.recipes.map(r => r.id === recipe.id ? recipe : r)
+      recipes: state.recipes.map(r => r.id === recipe.id ? recipe : r),
+      favorites: recipe.isFavorite
+        ? state.favorites.includes(recipe.id) ? state.favorites : [...state.favorites, recipe.id]
+        : state.favorites.filter(favoriteId => favoriteId !== recipe.id)
     }));
   },
 
   deleteRecipe: async (id) => {
-    await deleteRecipe(id);
+    await deleteRecipeById(id);
     set(state => ({
-      recipes: state.recipes.filter(r => r.id !== id)
+      recipes: state.recipes.filter(r => r.id !== id),
+      favorites: state.favorites.filter(favoriteId => favoriteId !== id)
     }));
   },
 
   toggleFavorite: async (id) => {
     const recipe = get().recipes.find(r => r.id === id);
-    if (!recipe) return;
+    if (!recipe) {
+      set(state => ({
+        favorites: state.favorites.includes(id)
+          ? state.favorites.filter(favoriteId => favoriteId !== id)
+          : [...state.favorites, id]
+      }));
+      return;
+    }
 
     const newFavorite = !recipe.isFavorite;
     await toggleFavorite(id, newFavorite);
     set(state => ({
-      recipes: state.recipes.map(r => r.id === id ? { ...r, isFavorite: newFavorite } : r)
+      recipes: state.recipes.map(r => r.id === id ? { ...r, isFavorite: newFavorite } : r),
+      favorites: newFavorite
+        ? state.favorites.includes(id) ? state.favorites : [...state.favorites, id]
+        : state.favorites.filter(favoriteId => favoriteId !== id)
     }));
   },
 

@@ -59,7 +59,7 @@ export default function Slide7Ready() {
         })
         await userStore.updateGoals({
           goalType: data.goalType, dailyCalorieTarget: targets.calories,
-          macroTarget: targets.macros, dailyBudget: 250, stepGoal: 8000,
+          macroTarget: targets.macros, dailyBudget: 250, stepGoal: 8000, exerciseCalorieGoal: 0,
         })
         await userStore.setOnboardingCompleted(true)
       }

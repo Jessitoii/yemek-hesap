@@ -1,18 +1,25 @@
-import { Gender, ActivityLevel, GoalType } from '../types/user';
+import { Gender, ActivityLevel, GoalType, UserProfile } from '../types/user';
 
 export interface CalorieTargets {
   dailyCalorieTarget: number;
 }
 
 /**
- * Calculates BMR using the Mifflin-St Jeor equation.
+ * Calculates BMR using Katch-McArdle when body fat is available,
+ * otherwise falls back to the Mifflin-St Jeor equation.
  */
 export function calcBMR(
   gender: Gender,
   weight: number,
   height: number,
-  age: number
+  age: number,
+  bodyFatPercent?: number | null
 ): number {
+  if (typeof bodyFatPercent === 'number' && bodyFatPercent > 0) {
+    const leanMassKg = weight * (1 - bodyFatPercent / 100);
+    return 370 + 21.6 * leanMassKg;
+  }
+
   const genderOffset = gender === Gender.MALE ? 5 : -161;
   return 10 * weight + 6.25 * height - 5 * age + genderOffset;
 }
@@ -28,6 +35,21 @@ export function calcTDEE(bmr: number, activityLevel: ActivityLevel): number {
     [ActivityLevel.VERY_ACTIVE]: 1.725,
   };
   return Math.round(bmr * multipliers[activityLevel]);
+}
+
+export function calculateTDEE(profile: UserProfile): number {
+  const bmr = calcBMR(
+    profile.gender,
+    profile.weight,
+    profile.height,
+    profile.age,
+    profile.bodyFatPercentage
+  );
+  return calcTDEE(bmr, profile.activityLevel ?? ActivityLevel.SEDENTARY);
+}
+
+export function calculateDailyCalorieGoal(profile: UserProfile, goals: GoalType[]): CalorieTargets {
+  return calcGoalTargets(calculateTDEE(profile), goals);
 }
 
 /**

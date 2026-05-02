@@ -1,13 +1,22 @@
 import { create } from 'zustand';
 import { Exercise } from '@/types/activity';
-import { addExercise, updateSteps } from '@/db/queries/activity';
+import { addExercise, DailyBalance } from '@/db/queries/activity';
 import { getCurrentStreak } from '@/db/queries/streak';
 import { useDailyStore } from './dailyStore';
 import { generateId } from '@/utils/uuid';
 
+const STEPS_KCAL_PER_STEP = 0.04;
+
+function calculateTodayBurnedCalories(steps: number, exercises: Exercise[]): number {
+  const stepsCalories = steps * STEPS_KCAL_PER_STEP;
+  const exercisesCaloriesSum = exercises.reduce((total, exercise) => total + exercise.burnedCalories, 0);
+  return stepsCalories + exercisesCaloriesSum;
+}
+
 interface ActivityState {
   todaySteps: number;
   todayBurnedCalories: number;
+  weeklyBalance: DailyBalance[];
   exercises: Exercise[];
   streak: number;
   isLoading: boolean;
@@ -22,6 +31,7 @@ interface ActivityState {
 export const useActivityStore = create<ActivityState>((set, get) => ({
   todaySteps: 0,
   todayBurnedCalories: 0,
+  weeklyBalance: [],
   exercises: [],
   streak: 0,
   isLoading: false,
@@ -29,15 +39,29 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   loadActivity: async (date) => {
     set({ isLoading: true });
     try {
-      const todayLog = useDailyStore.getState().todayLog;
+      let todayLog = useDailyStore.getState().todayLog;
+      console.log('[Activity] initial todayLog:', todayLog);
+
+      // If daily log not yet loaded, load it first
+      if (!todayLog) {
+        await useDailyStore.getState().loadLog(date);
+        todayLog = useDailyStore.getState().todayLog;
+        console.log('[Activity] todayLog after loadLog:', todayLog);
+      }
+
       if (todayLog) {
          const exercisesData = await import('@/db/queries/activity').then(m => m.getExercises(todayLog.id));
+         console.log('[Activity] exercises:', exercisesData);
          set({ 
             exercises: exercisesData,
             todaySteps: todayLog.stepCount || 0,
-            todayBurnedCalories: todayLog.burnedCalories || 0
+            todayBurnedCalories: calculateTodayBurnedCalories(todayLog.stepCount || 0, exercisesData)
          });
+         console.log('[Activity] todaySteps:', todayLog.stepCount, 'burned:', calculateTodayBurnedCalories(todayLog.stepCount || 0, exercisesData));
       }
+
+      const weeklyBalance = await import('@/db/queries/activity').then(m => m.getLastSevenDaysBalance());
+      set({ weeklyBalance });
       
       const currentStreak = await getCurrentStreak();
       set({ streak: currentStreak });
@@ -61,13 +85,16 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       await addExercise(newExercise);
       
       // Reload daily log to get up-to-date total burned calories
-      const updatedLog = await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
+      await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
       
       // Update local state
-      set(state => ({
-        exercises: [newExercise, ...state.exercises],
-        todayBurnedCalories: useDailyStore.getState().todayLog?.burnedCalories || (state.todayBurnedCalories + newExercise.burnedCalories)
-      }));
+      set(state => {
+        const exercises = [newExercise, ...state.exercises];
+        return {
+          exercises,
+          todayBurnedCalories: calculateTodayBurnedCalories(state.todaySteps, exercises)
+        };
+      });
     } catch (error) {
       console.error('[ActivityStore] Error adding exercise:', error);
     }
@@ -84,10 +111,13 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       // Reload daily log
       await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
 
-      set(state => ({
-        exercises: state.exercises.filter(e => e.id !== id),
-        todayBurnedCalories: useDailyStore.getState().todayLog?.burnedCalories || state.todayBurnedCalories
-      }));
+      set(state => {
+        const exercises = state.exercises.filter(e => e.id !== id);
+        return {
+          exercises,
+          todayBurnedCalories: calculateTodayBurnedCalories(state.todaySteps, exercises)
+        };
+      });
     } catch (error) {
       console.error('[ActivityStore] Error deleting exercise:', error);
     }
@@ -104,10 +134,10 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       // Reload daily log
       await useDailyStore.getState().loadLog(todayLog.date.toISOString().split('T')[0]);
       
-      set({ 
+      set(state => ({ 
         todaySteps: steps, 
-        todayBurnedCalories: useDailyStore.getState().todayLog?.burnedCalories || 0 
-      });
+        todayBurnedCalories: calculateTodayBurnedCalories(steps, state.exercises)
+      }));
     } catch (error) {
       console.error('[ActivityStore] Error updating steps:', error);
     }

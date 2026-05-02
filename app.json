@@ -8,17 +8,17 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4FC3F7"
+      "backgroundColor": "#FF8C00"
     },
     "ios": {
       "supportsTablet": true,
       "splash": {
-        "image": "./assets/splash.png",
+        "image": "./assets/icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#4FC3F7",
-        "tabletImage": "./assets/splash.png"
+        "backgroundColor": "#FF8C00",
+        "tabletImage": "./assets/icon.png"
       }
     },
     "android": {
@@ -34,14 +34,14 @@
         "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
       "splash": {
-        "image": "./assets/splash.png",
+        "image": "./assets/icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#4FC3F7",
-        "mdpi": "./assets/splash.png",
-        "hdpi": "./assets/splash.png",
-        "xhdpi": "./assets/splash.png",
-        "xxhdpi": "./assets/splash.png",
-        "xxxhdpi": "./assets/splash.png"
+        "backgroundColor": "#FF8C00",
+        "mdpi": "./assets/icon.png",
+        "hdpi": "./assets/icon.png",
+        "xhdpi": "./assets/icon.png",
+        "xxhdpi": "./assets/icon.png",
+        "xxxhdpi": "./assets/icon.png"
       },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

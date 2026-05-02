@@ -114,7 +114,7 @@ export async function saveRecipe(recipe: Recipe): Promise<void> {
   });
 }
 
-export async function deleteRecipe(id: string): Promise<void> {
+export async function deleteRecipeById(id: string): Promise<void> {
   const db = await getDB();
   await db.runAsync('DELETE FROM recipes WHERE id = ?', id);
 }

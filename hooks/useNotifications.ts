@@ -1,12 +1,23 @@
 import { AppSettings } from '@/types/user';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-const isExpoGo = require('expo-constants').default.appOwnership === 'expo';
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 const Notifications = isExpoGo ? null : require('expo-notifications');
-const SchedulableTriggerInputTypes = isExpoGo 
-  ? {} 
+const SchedulableTriggerInputTypes = isExpoGo
+  ? {}
   : require('expo-notifications').SchedulableTriggerInputTypes;
 
+if (!isExpoGo && Notifications) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 const DAY_MAP: Record<string, number> = {
   sunday: 1,
@@ -26,9 +37,6 @@ export async function requestPermission(): Promise<boolean> {
 
   try {
     if (!Notifications) return false;
-    const { status: existing } = await Notifications.getPermissionsAsync();
-    if (existing === 'granted') return true;
-
     const { status } = await Notifications.requestPermissionsAsync();
     return status === 'granted';
   } catch (error) {
@@ -76,6 +84,8 @@ export async function scheduleMealReminders(settings: AppSettings) {
     await Notifications.cancelScheduledNotificationAsync('meal-reminder-dinner');
 
     if (!settings.notif_meal_reminder) return;
+    const hasPermission = await requestPermission();
+    if (!hasPermission) return;
 
     const meals: Array<{ type: 'breakfast' | 'lunch' | 'dinner'; time: string }> = [
       { type: 'breakfast', time: settings.breakfast_time },
@@ -120,6 +130,8 @@ export async function scheduleWaterReminders(settings: AppSettings) {
     }
 
     if (!settings.notif_water_reminder) return;
+    const hasPermission = await requestPermission();
+    if (!hasPermission) return;
 
     const intervalHours = settings.water_interval_hours || 2;
     const [startHour] = parseTime(settings.water_start_time || '08:00');
@@ -158,6 +170,8 @@ export async function scheduleStreakWarning(settings: AppSettings) {
     if (!Notifications) return;
     await Notifications.cancelScheduledNotificationAsync('streak-warning');
     if (!settings.notif_streak_warning) return;
+    const hasPermission = await requestPermission();
+    if (!hasPermission) return;
 
     await Notifications.scheduleNotificationAsync({
       identifier: 'streak-warning',
@@ -188,6 +202,8 @@ export async function scheduleWeeklySummary(settings: AppSettings) {
     if (!Notifications) return;
     await Notifications.cancelScheduledNotificationAsync('weekly-summary');
     if (!settings.notif_weekly_summary) return;
+    const hasPermission = await requestPermission();
+    if (!hasPermission) return;
 
     const day = settings.weekly_summary_day?.toLowerCase() || 'sunday';
     const weekday = DAY_MAP[day] || 1;
@@ -227,6 +243,9 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
     const percent = consumed / goal;
 
     if (percent >= 1.0 && percent < 1.05) {
+      const hasPermission = await requestPermission();
+      if (!hasPermission) return;
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title: '🎉 Hedefe ulaştın!',
@@ -236,6 +255,9 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
       });
 
     } else if (percent >= 1.05) {
+      const hasPermission = await requestPermission();
+      if (!hasPermission) return;
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title: '⚠️ Kalori hedefi aşıldı',
@@ -246,6 +268,9 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
 
     } else if (percent >= 0.9) {
       const remaining = Math.round(goal - consumed);
+      const hasPermission = await requestPermission();
+      if (!hasPermission) return;
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title: '🎯 Neredeyse ulaştın!',
@@ -281,6 +306,9 @@ export async function triggerRecipeCalculatedNotification({
 
   try {
     if (!Notifications) return;
+    const hasPermission = await requestPermission();
+    if (!hasPermission) return;
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `✅ "${recipeName}" hesaplandı`,

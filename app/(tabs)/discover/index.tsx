@@ -6,17 +6,14 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
-  ActivityIndicator,
-  Alert
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   MagnifyingGlass,
   FadersHorizontal,
-  Heart,
   Sparkle,
   GlobeHemisphereWest,
-  Clock,
   Fire,
   ArrowRight,
   CalendarBlank
@@ -30,7 +27,7 @@ import { CategoryChip } from '../../../components/discover/CategoryChip';
 import { CalorieRangeCard } from '../../../components/discover/CalorieRangeCard';
 import { CuisineCard } from '../../../components/discover/CuisineCard';
 import { RandomRecipeCard } from '../../../components/discover/RandomRecipeCard';
-import { FilterPanel } from '../../../components/discover/FilterPanel';
+import { DiscoverFilters, FilterPanel } from '../../../components/discover/FilterPanel';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Input } from '../../../components/ui/Input';
 import { Card } from '../../../components/ui/Card';
@@ -68,7 +65,7 @@ const CUISINES = [
 
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { recipes } = useRecipesStore();
+  const { recipes, favorites, toggleFavorite } = useRecipesStore();
   const { translateToEnglish } = useTranslate();
   const [activeTab, setActiveTab] = useState<'discover' | 'favorites'>('discover');
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,11 +82,9 @@ export default function DiscoverScreen() {
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const [isCuisineLoading, setIsCuisineLoading] = useState(false);
 
-  const [activeFilters, setActiveFilters] = useState<any>({
+  const [activeFilters, setActiveFilters] = useState<DiscoverFilters>({
     categories: [],
     cuisines: [],
-    macros: [],
-    sort: 'relevant',
   });
 
   useEffect(() => {
@@ -178,56 +173,24 @@ export default function DiscoverScreen() {
     if (activeFilters.categories.length === 0 && activeFilters.cuisines.length === 0) return;
 
     setIsSearching(true);
-    let results: any[] = [];
+    let results: typeof searchResults = [];
 
     if (activeFilters.categories.length > 0) {
       for (const cat of activeFilters.categories) {
-        // TheMealDB category names focus on one-word keys like 'Breakfast', 'Chicken', etc.
-        // We might need a small map if CATEGORIES labels differ significantly
-        const categoryMap: any = {
-          'Kahvaltı': 'Breakfast',
-          'Öğle Yemeği': 'Beef', // Basic fallback mapping
-          'Akşam Yemeği': 'Seafood', // Basic fallback mapping
-          'Atıştırmalık': 'Side',
-          'Tatlı': 'Dessert',
-          'İçecek': 'Miscellaneous'
-        };
-        const catName = categoryMap[cat] || cat;
-        const r = await getMealsByCategory(catName);
+        const r = await getMealsByCategory(cat);
         results = [...results, ...r];
       }
     }
 
     if (activeFilters.cuisines.length > 0) {
-      const areaMap: Record<string, string> = {
-        'İtalyan': 'Italian',
-        'Meksika': 'Mexican',
-        'Türk': 'Turkish',
-        'Japon': 'Japanese',
-        'Fransız': 'French',
-        'Hint': 'Indian',
-        'Çin': 'Chinese',
-        'Yunan': 'Greek',
-        'Amerikan': 'American',
-        'İngiliz': 'British',
-      };
-
       for (const cuisine of activeFilters.cuisines) {
-        const area = areaMap[cuisine] || cuisine;
-        const r = await getMealsByArea(area);
+        const r = await getMealsByArea(cuisine);
         results = [...results, ...r];
       }
     }
 
-    // Duplicate'leri kaldır
     const unique = results.filter((r, i, arr) => arr.findIndex(x => x.id === r.id) === i);
-
-    // Sıralama uygula
-    if (activeFilters.sort === 'relevant') {
-      setSearchResults(unique);
-    } else {
-      setSearchResults(unique); // Kalori bazlı sıralama için detay lazım, şimdilik olduğu gibi
-    }
+    setSearchResults(unique);
 
     setIsSearching(false);
   };
@@ -260,7 +223,7 @@ export default function DiscoverScreen() {
             Filtre aktif: {[...activeFilters.categories, ...activeFilters.cuisines].join(', ')}
           </Text>
           <Pressable onPress={() => {
-            setActiveFilters({ categories: [], cuisines: [], macros: [], sort: 'relevant' });
+            setActiveFilters({ categories: [], cuisines: [] });
             setSearchResults([]);
           }}>
             <Text style={{ fontFamily: typography.fontBold, fontSize: 13, color: colors.error }}>Temizle</Text>
@@ -288,8 +251,11 @@ export default function DiscoverScreen() {
                 id={r.id}
                 name={r.name}
                 image={r.imageUrl}
-                calories={0}
+                calories={null}
                 cuisine={r.cuisine}
+                hideEmptyCalories
+                isFavorite={favorites.includes(r.id)}
+                onFavoritePress={() => toggleFavorite(r.id)}
                 onPress={() => router.push(`/(tabs)/discover/${r.id}`)}
               />
             ))}
@@ -447,8 +413,11 @@ export default function DiscoverScreen() {
                   id={r.id}
                   name={r.name}
                   image={r.imageUrl || r.strMealThumb || ''}
-                  calories={0}
+                  calories={null}
                   cuisine={selectedCuisine || ''}
+                  hideEmptyCalories
+                  isFavorite={favorites.includes(r.id)}
+                  onFavoritePress={() => toggleFavorite(r.id)}
                   onPress={() => router.push(`/(tabs)/discover/${r.id}`)}
                 />
               ))}
@@ -539,12 +508,13 @@ export default function DiscoverScreen() {
 
       <FilterPanel
         visible={filterVisible}
+        initialFilters={activeFilters}
         onClose={() => setFilterVisible(false)}
         onApply={(filters) => {
           setActiveFilters(filters);
           setFilterVisible(false);
         }}
-        onReset={() => setActiveFilters({ categories: [], cuisines: [], macros: [], sort: 'relevant' })}
+        onReset={() => setActiveFilters({ categories: [], cuisines: [] })}
       />
     </View>
   );

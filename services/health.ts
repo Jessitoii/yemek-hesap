@@ -43,20 +43,8 @@ export async function requestHealthPermissions(): Promise<boolean> {
           p.recordType === 'Steps' && p.accessType === 'read'
       );
       if (hasSteps) return true;
-      await hc.requestPermission([
-        { accessType: 'read', recordType: 'Steps' },
-        { accessType: 'read', recordType: 'ExerciseSession' },
-        { accessType: 'read', recordType: 'TotalCaloriesBurned' },
-        { accessType: 'write', recordType: 'ExerciseSession' },
-      ]);
-
-      // requestPermission dönüş değeri izin durumunu taşımıyor,
-      // gerçek durumu getGrantedPermissions ile kontrol et
-      const perms = await hc.getGrantedPermissions();
-      return perms.some(
-        (p: { recordType: string; accessType: string }) =>
-          p.recordType === 'Steps' && p.accessType === 'read'
-      );
+      await openHealthConnectSettings();
+      return false;
     } catch (error) {
       console.warn('[Health] Android izin hatası:', error);
       return false;
@@ -69,6 +57,18 @@ export async function requestHealthPermissions(): Promise<boolean> {
     return status === 'granted';
   } catch {
     return false;
+  }
+}
+
+export async function openHealthConnectSettings(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+
+  try {
+    const hc = await getHealthConnect();
+    if (!hc) return;
+    await hc.openHealthConnectSettings();
+  } catch (error) {
+    console.warn('[Health] Android ayarları açma hatası:', error);
   }
 }
 

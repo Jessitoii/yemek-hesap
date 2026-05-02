@@ -1,24 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   TextInput
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import {
   Plus,
   MagnifyingGlass,
   Carrot,
+  Trash,
 } from 'phosphor-react-native';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { RecipeCard } from '@/components/recipes/RecipeCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
+import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/colors';
 import { spacing, radius, shadow } from '@/constants/theme';
 import { typography } from '@/constants/typography';
@@ -26,9 +28,10 @@ import { typography } from '@/constants/typography';
 export default function RecipesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [showDeleteToast, setShowDeleteToast] = useState(false);
+  const openSwipeableRef = useRef<Swipeable | null>(null);
   const router = useRouter();
   const { recipes, isLoading, loadRecipes, deleteRecipe } = useRecipesStore();
-
 
   useEffect(() => {
     loadRecipes();
@@ -38,18 +41,50 @@ export default function RecipesScreen() {
     recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDelete = (id: string, name: string) => {
-    Alert.alert(
-      'Tarifi Sil',
-      `"${name}" tarifini silmek istediğine emin misin?`,
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => await deleteRecipe(id)
-        },
-      ]
+  const closeOpenSwipeable = () => {
+    openSwipeableRef.current?.close();
+    openSwipeableRef.current = null;
+  };
+
+  const handleDelete = async (id: string, swipeable: Swipeable | null) => {
+    await deleteRecipe(id);
+    swipeable?.close();
+    if (openSwipeableRef.current === swipeable) {
+      openSwipeableRef.current = null;
+    }
+    setShowDeleteToast(true);
+  };
+
+  const renderRecipeItem = ({ item }: { item: typeof filteredRecipes[number] }) => {
+    let swipeable: Swipeable | null = null;
+
+    const renderRightActions = () => (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={styles.deleteAction}
+        onPress={() => handleDelete(item.id, swipeable)}
+      >
+        <Trash size={24} color={colors.surface} weight="bold" />
+        <Text style={styles.deleteActionText}>Sil</Text>
+      </TouchableOpacity>
+    );
+
+    return (
+      <Swipeable
+        ref={(ref) => {
+          swipeable = ref;
+        }}
+        renderRightActions={renderRightActions}
+        overshootRight={false}
+        onSwipeableOpen={() => {
+          if (openSwipeableRef.current && openSwipeableRef.current !== swipeable) {
+            openSwipeableRef.current.close();
+          }
+          openSwipeableRef.current = swipeable;
+        }}
+      >
+        <RecipeCard recipe={item} />
+      </Swipeable>
     );
   };
 
@@ -117,11 +152,10 @@ export default function RecipesScreen() {
       <FlatList
         data={filteredRecipes}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RecipeCard recipe={item} />
-        )}
+        renderItem={renderRecipeItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={closeOpenSwipeable}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <EmptyState
@@ -139,6 +173,12 @@ export default function RecipesScreen() {
             </View>
           </View>
         }
+      />
+      <Toast
+        message="Tarif silindi"
+        type="success"
+        visible={showDeleteToast}
+        onClose={() => setShowDeleteToast(false)}
       />
     </View>
   );
@@ -198,5 +238,19 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: spacing.xxl,
     marginTop: -spacing.md,
+  },
+  deleteAction: {
+    width: 80,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteActionText: {
+    fontFamily: typography.fontSemiBold,
+    fontSize: 13,
+    color: colors.surface,
   },
 });

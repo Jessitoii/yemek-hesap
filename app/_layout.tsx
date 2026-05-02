@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import React, { useEffect, useState } from "react";
 import * as SplashScreen from 'expo-splash-screen'; // ← 1. IMPORT EKLENDİ
 
@@ -12,8 +14,26 @@ import {
 } from "@expo-google-fonts/nunito";
 import { getDB, initDB } from "../db";
 import { clearCalorieCache } from "@/db/queries/cache";
-const isExpoGo = require('expo-constants').default.appOwnership === 'expo';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 const Notifications = isExpoGo ? null : require('expo-notifications');
+
+if (!isExpoGo && Notifications) {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch (error) {
+    console.debug('[RootLayout] Notifications not supported in this environment');
+  }
+}
 // ← 2. COMPONENT DIŞINDA — splash'i hazır olana kadar tut
 SplashScreen.preventAutoHideAsync();
 
@@ -30,20 +50,6 @@ export default function RootLayout() {
     'Nunito-Bold': Nunito_700Bold,
     'Nunito-ExtraBold': Nunito_800ExtraBold,
   });
-
-  try {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-  } catch (error) {
-    console.debug('[RootLayout] Notifications not supported in this environment');
-  }
 
   useEffect(() => {
     async function init() {
@@ -117,9 +123,11 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
-      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }

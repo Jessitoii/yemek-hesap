@@ -19,7 +19,7 @@ import { GoalType, ActivityLevel } from '@/types/user';
 import { Couch, Bicycle, Barbell, Lightning } from 'phosphor-react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
-import { calcBMR, calcTDEE, calcGoalTargets } from '@/utils/calorieCalc';
+import { calculateDailyCalorieGoal, calcBMR, calcTDEE, calcGoalTargets } from '@/utils/calorieCalc';
 import { calcMacrosFromGoal } from '@/utils/macroCalc';
 import { Input } from '@/components/ui/Input';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,7 +91,7 @@ export default function ChangeGoalScreen() {
 
   const recommendedTargets = React.useMemo(() => {
     if (!profile) return null;
-    const bmr = calcBMR(profile.gender, profile.weight, profile.height, profile.age);
+    const bmr = calcBMR(profile.gender, profile.weight, profile.height, profile.age, profile.bodyFatPercentage);
     const tdee = calcTDEE(bmr, selectedActivity);
     const calTarget = calcGoalTargets(tdee, selectedGoals);
     const macroTarget = calcMacrosFromGoal(calTarget.dailyCalorieTarget, selectedGoals);
@@ -130,7 +130,16 @@ export default function ChangeGoalScreen() {
       await updateGoals(newGoals);
       // We also update activity level in profile since it affects TDEE
       const { updateProfile } = useUserStore.getState();
-      await updateProfile({ activityLevel: selectedActivity });
+      const updatedProfile = { ...profile, activityLevel: selectedActivity };
+      await updateProfile(updatedProfile);
+
+      const { dailyCalorieTarget } = calculateDailyCalorieGoal(updatedProfile, selectedGoals);
+      const macroTarget = calcMacrosFromGoal(dailyCalorieTarget, selectedGoals);
+      await updateGoals({
+        ...newGoals,
+        dailyCalorieTarget,
+        macroTarget,
+      });
 
       Alert.alert('Başarılı', 'Hedefleriniz güncellendi.');
       router.back();

@@ -86,6 +86,19 @@ export async function getCategories(): Promise<any[]> {
   }
 }
 
+export async function getAreas(): Promise<string[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/list.php?a=list`);
+    const json = await response.json();
+    return (json?.meals ?? [])
+      .map((meal: { strArea?: string }) => meal.strArea)
+      .filter((area: string | undefined): area is string => !!area);
+  } catch (error) {
+    console.warn('[TheMealDB API] Error fetching areas:', error);
+    return [];
+  }
+}
+
 /**
  * Filters recipes by category name.
  */

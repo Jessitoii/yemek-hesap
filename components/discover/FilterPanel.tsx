@@ -1,45 +1,71 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, ScrollView } from 'react-native';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { colors } from '../../constants/colors';
-import { spacing, radius } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 import { typography } from '../../constants/typography';
+import { getAreas } from '@/services/themealdb';
+
+export interface DiscoverFilters {
+  categories: string[];
+  cuisines: string[];
+}
 
 interface FilterPanelProps {
   visible: boolean;
   onClose: () => void;
-  onApply: (filters: any) => void;
+  onApply: (filters: DiscoverFilters) => void;
   onReset: () => void;
-  initialFilters?: any;
+  initialFilters?: DiscoverFilters;
 }
 
 const CATEGORIES = [
-  'Beef', 'Chicken', 'Dessert', 'Lamb', 'Miscellaneous', 
-  'Pasta', 'Pork', 'Seafood', 'Side', 'Starter', 
-  'Vegan', 'Vegetarian', 'Breakfast', 'Goat'
+  { label: 'Dana Eti', value: 'Beef' },
+  { label: 'Tavuk', value: 'Chicken' },
+  { label: 'Tatlı', value: 'Dessert' },
+  { label: 'Kuzu Eti', value: 'Lamb' },
+  { label: 'Diğer', value: 'Miscellaneous' },
+  { label: 'Makarna', value: 'Pasta' },
+  { label: 'Domuz Eti', value: 'Pork' },
+  { label: 'Deniz Ürünleri', value: 'Seafood' },
+  { label: 'Yan Yemek', value: 'Side' },
+  { label: 'Başlangıç', value: 'Starter' },
+  { label: 'Vegan', value: 'Vegan' },
+  { label: 'Vejetaryen', value: 'Vegetarian' },
+  { label: 'Kahvaltı', value: 'Breakfast' },
+  { label: 'Keçi Eti', value: 'Goat' },
 ];
 
-const CUISINES = [
-  'American', 'British', 'Canadian', 'Chinese', 'Croatian', 
-  'Dutch', 'Egyptian', 'French', 'Greek', 'Indian', 
-  'Irish', 'Italian', 'Jamaican', 'Japanese', 'Kenyan', 
-  'Malaysian', 'Mexican', 'Moroccan', 'Polish', 'Portuguese', 
-  'Russian', 'Spanish', 'Thai', 'Tunisian', 'Turkish', 'Vietnamese'
-];
-
-const MACROS = [
-  'Yüksek Protein', 'Düşük Karbonhidrat', 'Dengeli', 'Düşük Yağ', 'Ketojenik', 'Vegan'
-];
-
-const SORT_OPTIONS = [
-  { label: 'İlgili', value: 'relevant' },
-  { label: 'En Az Kalori', value: 'min_cal' },
-  { label: 'En Çok Kalori', value: 'max_cal' },
-  { label: 'En Ucuz', value: 'min_cost' },
-  { label: 'En Pahalı', value: 'max_cost' },
-];
+const CUISINE_LABELS: Record<string, string> = {
+  American: 'Amerikan',
+  British: 'İngiliz',
+  Canadian: 'Kanada',
+  Chinese: 'Çin',
+  Croatian: 'Hırvat',
+  Dutch: 'Hollanda',
+  Egyptian: 'Mısır',
+  French: 'Fransız',
+  Greek: 'Yunan',
+  Indian: 'Hint',
+  Irish: 'İrlanda',
+  Italian: 'İtalyan',
+  Jamaican: 'Jamaika',
+  Japanese: 'Japon',
+  Kenyan: 'Kenya',
+  Malaysian: 'Malezya',
+  Mexican: 'Meksika',
+  Moroccan: 'Fas',
+  Polish: 'Polonya',
+  Portuguese: 'Portekiz',
+  Russian: 'Rus',
+  Spanish: 'İspanyol',
+  Thai: 'Tayland',
+  Tunisian: 'Tunus',
+  Turkish: 'Türk',
+  Vietnamese: 'Vietnam',
+};
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   visible,
@@ -49,11 +75,17 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   initialFilters = {
     categories: [],
     cuisines: [],
-    macros: [],
-    sort: 'relevant',
   },
 }) => {
-  const [filters, setFilters] = useState(initialFilters);
+  const [filters, setFilters] = useState<DiscoverFilters>(initialFilters);
+  const [cuisines, setCuisines] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    setFilters(initialFilters);
+    getAreas().then(setCuisines);
+  }, [initialFilters, visible]);
 
   const toggleItem = (list: string[], item: string) => {
     if (list.includes(item)) {
@@ -71,67 +103,37 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     const defaultFilters = {
       categories: [],
       cuisines: [],
-      macros: [],
-      sort: 'relevant',
     };
     setFilters(defaultFilters);
     onReset();
   };
 
   return (
-    <Modal visible={visible} onClose={onClose} title="Filtrele">
+    <Modal visible={visible} onClose={onClose} title="Filtreler">
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Kategoriler</Text>
+          <Text style={styles.sectionTitle}>Kategori</Text>
           <View style={styles.chipRow}>
             {CATEGORIES.map(cat => (
               <Chip
-                key={cat}
-                label={cat}
-                selected={filters.categories.includes(cat)}
-                onPress={() => setFilters({ ...filters, categories: toggleItem(filters.categories, cat) })}
+                key={cat.value}
+                label={cat.label}
+                selected={filters.categories.includes(cat.value)}
+                onPress={() => setFilters({ ...filters, categories: toggleItem(filters.categories, cat.value) })}
               />
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mutfaklar</Text>
+          <Text style={styles.sectionTitle}>Mutfak</Text>
           <View style={styles.chipRow}>
-            {CUISINES.map(cuisine => (
+            {cuisines.map((cuisine, index) => (
               <Chip
-                key={cuisine}
-                label={cuisine}
+                key={`cuisine-${index}-${cuisine}`}
+                label={CUISINE_LABELS[cuisine] ?? cuisine}
                 selected={filters.cuisines.includes(cuisine)}
                 onPress={() => setFilters({ ...filters, cuisines: toggleItem(filters.cuisines, cuisine) })}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Makrolar</Text>
-          <View style={styles.chipRow}>
-            {MACROS.map(macro => (
-              <Chip
-                key={macro}
-                label={macro}
-                selected={filters.macros.includes(macro)}
-                onPress={() => setFilters({ ...filters, macros: toggleItem(filters.macros, macro) })}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sıralama</Text>
-          <View style={styles.chipRow}>
-            {SORT_OPTIONS.map(opt => (
-              <Chip
-                key={opt.value}
-                label={opt.label}
-                selected={filters.sort === opt.value}
-                onPress={() => setFilters({ ...filters, sort: opt.value })}
               />
             ))}
           </View>
@@ -139,13 +141,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           label="Sıfırla"
           style={styles.resetButton}
           onPress={handleReset}
         />
-        <Button 
+        <Button
           label="Filtreleri Uygula"
           style={styles.applyButton}
           onPress={handleApply}

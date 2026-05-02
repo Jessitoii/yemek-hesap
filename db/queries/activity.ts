@@ -1,6 +1,12 @@
 import { getDB } from '../index';
 import { Exercise } from '../../types/activity';
 
+export interface DailyBalance {
+  date: string;
+  consumedCalories: number;
+  burnedCalories: number;
+}
+
 export async function addExercise(exercise: Exercise): Promise<void> {
   const db = await getDB();
   // Using transaction to prevent "database is locked" errors and ensure atomicity
@@ -39,6 +45,36 @@ export async function updateSteps(logId: string, steps: number): Promise<void> {
       ) + (step_count * 0.04) WHERE id = ?`,
       logId, logId
     );
+  });
+}
+
+export async function getLastSevenDaysBalance(): Promise<DailyBalance[]> {
+  const db = await getDB();
+  const dates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    return date.toISOString().split('T')[0];
+  });
+
+  const rows = await db.getAllAsync<{
+    date: string;
+    consumedCalories: number | null;
+    burnedCalories: number | null;
+  }>(
+    `SELECT date, total_calories as consumedCalories, burned_calories as burnedCalories
+     FROM daily_log
+     WHERE date BETWEEN ? AND ?`,
+    dates[0], dates[6]
+  );
+  const balanceByDate = new Map(rows.map(row => [row.date, row]));
+
+  return dates.map(date => {
+    const row = balanceByDate.get(date);
+    return {
+      date,
+      consumedCalories: row?.consumedCalories ?? 0,
+      burnedCalories: row?.burnedCalories ?? 0,
+    };
   });
 }
 

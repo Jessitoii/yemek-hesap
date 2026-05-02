@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Image, Pressable } from 'react-native';
+import { GestureResponderEvent, StyleSheet, View, Text, Image, Pressable } from 'react-native';
 import { Heart } from 'phosphor-react-native';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -11,11 +11,12 @@ interface DiscoverCardProps {
   id: string;
   name: string;
   image: string;
-  calories: number;
+  calories?: number | null;
   cuisine: string;
   isFavorite?: boolean;
+  hideEmptyCalories?: boolean;
   onPress?: () => void;
-  onFavoritePress?: () => void;
+  onFavoritePress?: (event: GestureResponderEvent) => void;
 }
 
 export const DiscoverCard: React.FC<DiscoverCardProps> = ({
@@ -24,16 +25,22 @@ export const DiscoverCard: React.FC<DiscoverCardProps> = ({
   calories,
   cuisine,
   isFavorite = false,
+  hideEmptyCalories = false,
   onPress,
   onFavoritePress,
 }) => {
+  const shouldShowCalories = calories != null && (!hideEmptyCalories || calories > 0);
+
   return (
     <Card onPress={onPress} style={styles.card}>
       <View style={styles.imageContainer}>
         <Image source={{ uri: image }} style={styles.image} />
         <Pressable 
           style={styles.favoriteButton} 
-          onPress={onFavoritePress}
+          onPress={(event) => {
+            event.stopPropagation();
+            onFavoritePress?.(event);
+          }}
           hitSlop={8}
         >
           <Heart 
@@ -49,9 +56,11 @@ export const DiscoverCard: React.FC<DiscoverCardProps> = ({
       
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={1}>{name}</Text>
-        <View style={styles.stats}>
-          <Text style={styles.calories}>{calories} <Text style={styles.kcal}>kcal</Text></Text>
-        </View>
+        {shouldShowCalories && (
+          <View style={styles.stats}>
+            <Text style={styles.calories}>{calories} <Text style={styles.kcal}>kcal</Text></Text>
+          </View>
+        )}
       </View>
     </Card>
   );

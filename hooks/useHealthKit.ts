@@ -36,10 +36,10 @@ export function useHealthKit() {
        const steps = await getTodaySteps();
        // Estimated calories from steps (e.g., 0.04 kcal per step)
        const burnedCalories = Math.round(steps * 0.04);
-       await activityStore.updateSteps(steps, burnedCalories);
+       await activityStore.updateSteps(steps);
     } else if (isPedometerAvailable) {
        const burnedCalories = Math.round(pedometerSteps * 0.04);
-       await activityStore.updateSteps(pedometerSteps, burnedCalories);
+       await activityStore.updateSteps(pedometerSteps);
     }
   }, [isConnected, isPedometerAvailable, pedometerSteps, activityStore]);
 

@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
-  ActivityIndicator,
-  Linking
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
@@ -25,10 +24,12 @@ import { Gender } from '@/types/user';
 import { useNotifications } from '@/hooks/useNotifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
+import { calculateDailyCalorieGoal } from '@/utils/calorieCalc';
+import { calcMacrosFromGoal } from '@/utils/macroCalc';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, goals, settings, stats, isLoading, loadUser, loadStats, updateSettings, updateProfile } = useUserStore();
+  const { profile, goals, settings, stats, isLoading, loadUser, loadStats, updateSettings, updateProfile, updateGoals } = useUserStore();
   const [bfModalVisible, setBfModalVisible] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const notifications = useNotifications();
@@ -64,7 +65,18 @@ export default function ProfileScreen() {
 
 
   const handleBodyFatSave = async (value: number) => {
-    await updateProfile({ bodyFatPercentage: value });
+    if (!profile || !goals) return;
+
+    const updatedProfile = { ...profile, bodyFatPercentage: value };
+    await updateProfile(updatedProfile);
+
+    const { dailyCalorieTarget } = calculateDailyCalorieGoal(updatedProfile, goals.goalType);
+    const macroTarget = calcMacrosFromGoal(dailyCalorieTarget, goals.goalType);
+    await updateGoals({
+      ...goals,
+      dailyCalorieTarget,
+      macroTarget,
+    });
     setBfModalVisible(false);
   };
 
@@ -247,21 +259,9 @@ export default function ProfileScreen() {
                   // Bağlantıyı kes
                   await updateSettings({ healthConnected: false });
                 } else {
-                  // İzin iste
-                  const { requestHealthPermissions } = await import('@/services/health');
-                  const granted = await requestHealthPermissions();
-                  if (granted) {
-                    await updateSettings({ healthConnected: true });
-                  } else {
-                    Alert.alert(
-                      'İzin Gerekli',
-                      'Sağlık uygulamasına erişim izni verilmedi. Ayarlardan izin verebilirsin.',
-                      [
-                        { text: 'İptal', style: 'cancel' },
-                        { text: 'Ayarlara Git', onPress: () => Linking.openSettings() },
-                      ]
-                    );
-                  }
+                  // Health Connect ayarlarını aç
+                  const { openHealthConnectSettings } = await import('@/services/health');
+                  await openHealthConnectSettings();
                 }
               }}
             >

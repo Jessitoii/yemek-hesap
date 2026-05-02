@@ -24,12 +24,14 @@ import { Gender } from '@/types/user';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { calculateDailyCalorieGoal } from '@/utils/calorieCalc';
+import { calcMacrosFromGoal } from '@/utils/macroCalc';
 
 const PHOTO_KEY = 'profile_photo';
 
 export default function ProfileEditScreen() {
   const router = useRouter();
-  const { profile, updateProfile, isLoading } = useUserStore();
+  const { profile, goals, updateProfile, updateGoals, isLoading } = useUserStore();
 
   const [name, setName] = useState(profile?.name || '');
   const [gender, setGender] = useState<Gender>(profile?.gender || Gender.MALE);
@@ -91,6 +93,8 @@ export default function ProfileEditScreen() {
   };
 
   const handleSave = async () => {
+    if (!profile) return;
+
     if (!name.trim()) {
       Alert.alert('Hata', 'Lütfen isminizi girin.');
       return;
@@ -98,13 +102,25 @@ export default function ProfileEditScreen() {
 
     setIsSaving(true);
     try {
-      await updateProfile({
+      const updatedProfile = {
+        ...profile,
         name,
         gender,
         age: parseInt(age) || 0,
         height: parseInt(height) || 0,
         weight: parseInt(weight) || 0,
-      });
+      };
+      await updateProfile(updatedProfile);
+
+      if (goals) {
+        const { dailyCalorieTarget } = calculateDailyCalorieGoal(updatedProfile, goals.goalType);
+        const macroTarget = calcMacrosFromGoal(dailyCalorieTarget, goals.goalType);
+        await updateGoals({
+          ...goals,
+          dailyCalorieTarget,
+          macroTarget,
+        });
+      }
       router.back();
     } catch (error) {
       console.error('Error saving profile:', error);
