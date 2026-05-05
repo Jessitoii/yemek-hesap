@@ -31,6 +31,20 @@ export const colors = {
   border:           '#E0E0E0',
   borderLight:      '#F0F0F0',
 
+  // Tab body backgrounds
+  bgRecipes:        '#F0F9FF',
+  bgDaily:          '#F0FFF4',
+  bgDiscover:       '#FFFBF0',
+  bgActivity:       '#FFF0F6',
+  bgProfile:        '#FFF5F5',
+
+  // Tab header gradients
+  headerGradientRecipes:  ['#DBEEFF', '#F0F9FF'],
+  headerGradientDaily:    ['#D6F5DC', '#F0FFF4'],
+  headerGradientDiscover: ['#FFF3D6', '#FFFBF0'],
+  headerGradientActivity: ['#FFD6EC', '#FFF0F6'],
+  headerGradientProfile:  ['#FFD6D6', '#FFF5F5'],
+
   // Text
   textPrimary:      '#212121',
   textSecondary:    '#757575',

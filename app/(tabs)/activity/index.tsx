@@ -134,7 +134,9 @@ export default function ActivityScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.headerTitle}>Aktivite</Text>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Aktivite</Text>
+        </View>
 
         <BurnedCaloriesRing
           burned={todayBurnedCalories}
@@ -272,9 +274,20 @@ export default function ActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.bgActivity },
   scrollContent: { padding: 20, paddingBottom: 100 },
-  headerTitle: { fontFamily: typography.fontBold, fontSize: typography.xxl, color: colors.textPrimary, marginBottom: 10 },
+  header: {
+    backgroundColor: colors.headerGradientActivity[0],
+    borderBottomColor: colors.pinkLight,
+    borderBottomWidth: 1,
+    marginHorizontal: -20,
+    marginTop: -20,
+    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 14,
+  },
+  headerTitle: { fontFamily: typography.fontBold, fontSize: typography.xxl, color: colors.textPrimary },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 },
   sectionTitle: { fontFamily: typography.fontBold, fontSize: typography.lg, color: colors.textPrimary },
   addLink: { fontFamily: typography.fontBold, fontSize: typography.sm, color: colors.primary },
@@ -335,6 +348,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.bgActivity,
   },
 });

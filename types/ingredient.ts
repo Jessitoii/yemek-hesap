@@ -13,6 +13,7 @@ export interface MigrosProduct {
   price: number;
   imageUrl: string;
   unit: string;
+  unitPrice?: string | null;
   pricePerUnit?: number;
   unitType?: string;
   brand?: string;
@@ -35,5 +36,5 @@ export interface IngredientQuantity {
   ingredientId: string;
   amount: number;
   unit: string;
-  grams: number;
+  grams: number | null;
 }

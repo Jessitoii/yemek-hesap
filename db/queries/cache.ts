@@ -36,6 +36,22 @@ export async function setCalorieCache(searchTerm: string, data: any): Promise<vo
   );
 }
 
+export async function getManualGramOverride(ingredientName: string, unit: string): Promise<number | null> {
+  const cached = await getCalorieCache(`manual_gram:${ingredientName}:${unit}`);
+  const value = cached?.calories_per_100g;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+export async function setManualGramOverride(ingredientName: string, unit: string, grams: number): Promise<void> {
+  await setCalorieCache(`manual_gram:${ingredientName}:${unit}`, {
+    calories: grams,
+    protein: null,
+    carbs: null,
+    fat: null,
+    source: 'manual',
+  });
+}
+
 export async function getMigrosCache(searchTerm: string): Promise<any[] | null> {
   const db = await getDB();
   const row = await db.getFirstAsync<any>(

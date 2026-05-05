@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MigrosProduct } from '@/types/ingredient';
-import { searchMigrosProducts } from '@/services/migros';
+import { hasNonFoodMigrosSignal, searchMigrosProducts } from '@/services/migros';
 import { getMigrosCache, setMigrosCache } from '@/db/queries/cache';
 
 /**
@@ -23,7 +23,11 @@ export function useMigrosSearch() {
       // 1. Check cache first
       const cached = await getMigrosCache(trimmed);
       if (cached) {
-        setResults(cached);
+        setResults(cached.filter(product => !hasNonFoodMigrosSignal([
+          product.category,
+          product.topCategory,
+          product.name,
+        ])));
         setIsLoading(false);
         return;
       }

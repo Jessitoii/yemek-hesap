@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { Tabs } from "expo-router";
+import { Tabs, usePathname } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CookingPot,
@@ -8,7 +8,6 @@ import {
   Compass,
   Lightning,
   User,
-  CookingPotIcon
 } from "phosphor-react-native";
 import { colors } from "../../constants/colors";
 import { typography } from "../../constants/typography";
@@ -26,25 +25,35 @@ const TabIcon = ({ Icon, color, focused }: TabIconProps) => (
   </View>
 );
 
+const getActiveBackground = (pathname: string) => {
+  if (pathname.includes('/recipes')) return colors.bgRecipes;
+  if (pathname.includes('/discover')) return colors.bgDiscover;
+  if (pathname.includes('/activity')) return colors.bgActivity;
+  if (pathname.includes('/profile')) return colors.bgProfile;
+  return colors.bgDaily;
+};
+
+const getTabBarStyle = (backgroundColor: string, borderTopColor: string, bottomInset: number) => ({
+  backgroundColor,
+  borderTopColor,
+  height: 60 + bottomInset,
+  paddingBottom: bottomInset,
+  paddingTop: 8,
+  borderTopWidth: 1,
+  elevation: 0,
+  shadowOpacity: 0,
+});
+
 export default function Layout() {
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: getActiveBackground(pathname) }]} edges={['top']}>
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarInactiveTintColor: colors.textDisabled,
-          tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.borderLight,
-            height: 60 + insets.bottom,
-            paddingBottom: insets.bottom,
-            paddingTop: 8,
-            borderTopWidth: 1,
-            elevation: 0,
-            shadowOpacity: 0,
-          },
           tabBarLabelStyle: {
             fontFamily: typography.fontSemiBold,
             fontSize: 11,
@@ -58,6 +67,7 @@ export default function Layout() {
             title: "Tarifler",
             tabBarLabel: "Tarifler",
             tabBarActiveTintColor: colors.primary,
+            tabBarStyle: getTabBarStyle(colors.bgRecipes, colors.primaryLight, insets.bottom),
             tabBarIcon: ({ color, focused }) => (
               <TabIcon Icon={CookingPot} color={color} focused={focused} />
             ),
@@ -69,8 +79,9 @@ export default function Layout() {
             title: "Günlük",
             tabBarLabel: "Günlük",
             tabBarActiveTintColor: colors.secondary,
+            tabBarStyle: getTabBarStyle(colors.bgDaily, colors.secondaryLight, insets.bottom),
             tabBarIcon: ({ color, focused }) => (
-              <TabIcon Icon={CookingPot} color={color} focused={focused} />
+              <TabIcon Icon={CalendarBlank} color={color} focused={focused} />
             ),
           }}
         />
@@ -80,6 +91,7 @@ export default function Layout() {
             title: "Keşfet",
             tabBarLabel: "Keşfet",
             tabBarActiveTintColor: colors.accent,
+            tabBarStyle: getTabBarStyle(colors.bgDiscover, colors.accentLight, insets.bottom),
             tabBarIcon: ({ color, focused }) => (
               <TabIcon Icon={Compass} color={color} focused={focused} />
             ),
@@ -91,6 +103,7 @@ export default function Layout() {
             title: "Aktivite",
             tabBarLabel: "Aktivite",
             tabBarActiveTintColor: colors.pink,
+            tabBarStyle: getTabBarStyle(colors.bgActivity, colors.pinkLight, insets.bottom),
             tabBarIcon: ({ color, focused }) => (
               <TabIcon Icon={Lightning} color={color} focused={focused} />
             ),
@@ -102,6 +115,7 @@ export default function Layout() {
             title: "Profil",
             tabBarLabel: "Profil",
             tabBarActiveTintColor: colors.bordo,
+            tabBarStyle: getTabBarStyle(colors.bgProfile, colors.bordoLight, insets.bottom),
             tabBarIcon: ({ color, focused }) => (
               <TabIcon Icon={User} color={color} focused={focused} />
             ),
@@ -113,6 +127,9 @@ export default function Layout() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',

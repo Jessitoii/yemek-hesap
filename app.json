@@ -22,16 +22,20 @@
       }
     },
     "android": {
-      "minSdkVersion": 26,
-      "targetSdkVersion": 36,
-      "compileSdkVersion": 36,
-      "buildToolsVersion": "36.0.0",
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.WRITE_STEPS",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.VIBRATE",
-        "android.permission.RECEIVE_BOOT_COMPLETED"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ],
       "splash": {
         "image": "./assets/icon.png",
@@ -50,7 +54,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.jessitoi.yemekhesap"
+      "package": "com.jessitoi.yemekhesap",
+      "queries": [
+        {
+          "package": "com.google.android.apps.healthdata"
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -72,10 +81,14 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "targetSdkVersion": 36,
+            "compileSdkVersion": 36,
+            "buildToolsVersion": "36.0.0"
           }
         }
       ],
+      "./withHealthConnect",
       "@react-native-community/datetimepicker"
     ],
     "runtimeVersion": {

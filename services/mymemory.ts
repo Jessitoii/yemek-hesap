@@ -1,5 +1,23 @@
 import { getTranslation, setTranslation } from '@/db/queries/cache';
 
+const TRANSLATION_OVERRIDES: Record<string, string> = {
+  leek: 'pırasa',
+  courgette: 'kabak',
+  aubergine: 'patlıcan',
+  coriander: 'kişniş',
+  'spring onion': 'yeşil soğan',
+  rocket: 'roka',
+  cornflour: 'mısır nişastası',
+  'plain flour': 'un',
+  'self-raising flour': 'kabartmalı un',
+  'double cream': 'krema',
+  'single cream': 'krema',
+  passata: 'domates sosu',
+  chorizo: 'sucuk',
+  'streaky bacon': 'pastırma',
+  'back bacon': 'pastırma',
+};
+
 /**
  * Translates text from English to Turkish using MyMemory API.
  * Uses SQLite caching as the first priority to avoid unnecessary API calls.
@@ -8,6 +26,13 @@ export async function translateToTurkish(text: string): Promise<string> {
   const query = text.trim().toLowerCase();
 
   try {
+    const override = TRANSLATION_OVERRIDES[query];
+    if (override) {
+      await setTranslation(query, override);
+      if (query === 'leek') console.log('[Translation] leek ->', override);
+      return override;
+    }
+
     // 1. Check SQLite cache
     const cached = await getTranslation(query);
     if (cached) return cached;
@@ -28,6 +53,7 @@ export async function translateToTurkish(text: string): Promise<string> {
 
     // 3. Cache the result
     await setTranslation(query, translated);
+    if (query === 'leek') console.log('[Translation] leek ->', translated);
     return translated;
   } catch (error) {
     console.warn('[MyMemory API] Error translating text:', error);

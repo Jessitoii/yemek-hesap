@@ -170,7 +170,7 @@ export default function IngredientDetailScreen() {
               ...ing,
               amount: numAmount,
               unit: unit,
-              grams: toGrams(numAmount, unit, name) || 0
+              grams: toGrams(numAmount, unit, name)
             };
           }
           return ing;
@@ -184,26 +184,35 @@ export default function IngredientDetailScreen() {
             : allIngs.find(i => i.id === ing.ingredientId);
           
           if (detail) {
+            if (ing.grams == null) {
+              acc.caloriesComplete = false;
+              acc.costComplete = false;
+              return acc;
+            }
             const ratio = ing.grams / 100;
             acc.calories += (detail.nutrition?.calories || 0) * ratio;
             acc.protein += (detail.nutrition?.protein || 0) * ratio;
             acc.carbs += (detail.nutrition?.carbs || 0) * ratio;
             acc.fat += (detail.nutrition?.fat || 0) * ratio;
             const detailServing = detail.nutrition?.servingSize || 100;
-            acc.cost += (detail.lastKnownPrice || 0) * (ing.grams / detailServing);
+            if (detail.lastKnownPrice == null) {
+              acc.costComplete = false;
+            } else {
+              acc.cost += detail.lastKnownPrice * (ing.grams / detailServing);
+            }
           }
           return acc;
-        }, { calories: 0, protein: 0, carbs: 0, fat: 0, cost: 0 });
+        }, { calories: 0, protein: 0, carbs: 0, fat: 0, cost: 0, caloriesComplete: true, costComplete: true });
 
         const updatedRecipe = {
           ...recipe,
           ingredients: updatedIngredients,
-          totalCalories: totals.calories,
-          totalCost: totals.cost,
+          totalCalories: totals.caloriesComplete ? totals.calories : null,
+          totalCost: totals.costComplete ? totals.cost : null,
           macros: {
-            protein: totals.protein,
-            carbs: totals.carbs,
-            fat: totals.fat
+            protein: totals.caloriesComplete ? totals.protein : null,
+            carbs: totals.caloriesComplete ? totals.carbs : null,
+            fat: totals.caloriesComplete ? totals.fat : null
           },
           updatedAt: new Date()
         };

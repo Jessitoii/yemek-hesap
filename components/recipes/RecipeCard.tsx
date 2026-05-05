@@ -22,8 +22,8 @@ interface RecipeCardProps {
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const router = useRouter();
   
-  const perServingCalories = Math.round(recipe.totalCalories / recipe.servings);
-  const perServingCost = (recipe.totalCost / recipe.servings).toFixed(2);
+  const perServingCalories = recipe.totalCalories == null ? null : Math.round(recipe.totalCalories / recipe.servings);
+  const perServingCost = recipe.totalCost == null ? null : (recipe.totalCost / recipe.servings).toFixed(2);
 
   const handlePress = () => {
     router.push(`/(tabs)/recipes/${recipe.id}`);
@@ -70,7 +70,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               <Flame size={18} color={colors.accentDark} weight="fill" />
               <View>
                 <Text style={styles.statLabel}>Kalori</Text>
-                <Text style={styles.statValue}>{perServingCalories} kcal</Text>
+                <Text style={styles.statValue}>{perServingCalories == null ? '? kcal' : `${perServingCalories} kcal`}</Text>
               </View>
             </View>
             
@@ -80,7 +80,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               <CreditCard size={18} color={colors.secondaryDark} weight="fill" />
               <View>
                 <Text style={styles.statLabel}>Maliyet</Text>
-                <Text style={styles.statValue}>₺{perServingCost}</Text>
+                <Text style={styles.statValue}>{perServingCost == null ? '₺?.??' : `₺${perServingCost}`}</Text>
               </View>
             </View>
           </View>

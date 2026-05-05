@@ -15,12 +15,12 @@ export interface Recipe {
   instructions?: string;
   cuisine?: string;
   source?: 'TheMealDB' | 'Custom';
-  totalCalories: number;
-  totalCost: number;
+  totalCalories: number | null;
+  totalCost: number | null;
   macros: {
-    protein: number;
-    carbs: number;
-    fat: number;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
   };
   isFavorite: boolean;
   createdAt: Date;

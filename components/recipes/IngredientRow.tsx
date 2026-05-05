@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { CaretRight, ChefHat } from 'phosphor-react-native';
 import { RecipeIngredient } from '@/types/recipe';
-import { Ingredient } from '@/types/ingredient';
 import { colors } from '@/constants/colors';
 import { spacing, radius } from '@/constants/theme';
 import { typography } from '@/constants/typography';
@@ -11,7 +10,7 @@ import { IngredientCalcState } from '@/hooks/useRecipeCalculation';
 import { SkeletonRow } from '../ui/SkeletonRow';
 
 interface IngredientRowProps {
-  ingredient: RecipeIngredient | { name: string; amount: string; unit: string; grams: number };
+  ingredient: RecipeIngredient | { name: string; amount: string; unit: string; grams: number | null };
   calcState?: IngredientCalcState;
   onPress?: () => void;
 }
@@ -25,21 +24,21 @@ export function IngredientRow({ ingredient, calcState, onPress }: IngredientRowP
   
   // Use calcState values if available, otherwise fallback to store/ingredient props
   const name = calcState?.nameTr || calcState?.nameEn || (ingredient as any).name || detail?.name;
-  const quantity = calcState 
-    ? `${calcState.measure} ${calcState.grams ? `(${Math.round(calcState.grams)}g)` : ''}`
-    : `${(ingredient as any).amount} ${(ingredient as any).unit} (${(ingredient as any).grams}g)`;
+  const quantity = calcState
+    ? `${calcState.measure} ${calcState.grams != null ? `(${Math.round(calcState.grams)}g)` : ''}`
+    : `${(ingredient as any).amount} ${(ingredient as any).unit}${(ingredient as any).grams != null ? ` (${(ingredient as any).grams}g)` : ''}`;
 
   const calories = calcState?.status === 'done'
-    ? Math.round(calcState.calories || 0)
-    : detail 
-      ? Math.round((detail.nutrition.calories * (ingredient as any).grams) / 100) 
-      : 0;
+    ? (calcState.calories != null ? `${Math.round(calcState.calories)} kcal` : '? kcal')
+    : detail && (ingredient as any).grams != null
+      ? `${Math.round((detail.nutrition.calories * (ingredient as any).grams) / 100)} kcal`
+      : '? kcal';
   
   const cost = calcState?.status === 'done'
-    ? (calcState.costTL || 0).toFixed(2)
-    : detail && detail.lastKnownPrice 
-      ? ((detail.lastKnownPrice * (ingredient as any).grams) / (detail.nutrition.servingSize || 100)).toFixed(2)
-      : '0.00';
+    ? (calcState.costTL != null ? `₺${calcState.costTL.toFixed(2)}` : '₺?.??')
+    : detail && detail.lastKnownPrice && (ingredient as any).grams != null
+      ? `₺${((detail.lastKnownPrice * (ingredient as any).grams) / (detail.nutrition.servingSize || 100)).toFixed(2)}`
+      : '₺?.??';
 
   const imageUrl = calcState?.migrosProduct?.imageUrl || detail?.imageUrl;
 
@@ -86,11 +85,11 @@ export function IngredientRow({ ingredient, calcState, onPress }: IngredientRowP
             <SkeletonRow width={40} height={14} />
           </>
         ) : calcState?.requiresManualInput ? (
-          <Text style={styles.manualInput}>Miktar girin</Text>
+          <Text style={styles.manualInput}>1 adet {name} = kaç gram?</Text>
         ) : (
           <>
-            <Text style={styles.calories}>{calories} kcal</Text>
-            <Text style={styles.cost}>₺{cost}</Text>
+            <Text style={styles.calories}>{calories}</Text>
+            <Text style={styles.cost}>{cost}</Text>
           </>
         )}
       </View>

@@ -1,5 +1,10 @@
 import { Recipe } from '../types/recipe';
 
+type CompleteRecipe = Recipe & {
+  totalCalories: number;
+  macros: Recipe['macros'] & { protein: number };
+};
+
 /**
  * Returns a smart recipe suggestion based on remaining calories and macro gaps.
  * @param remainingCalories Remaining calorie budget for the day.
@@ -15,8 +20,10 @@ export function getSuggestion(
   if (remainingCalories <= 0) return null;
 
   // Filter recipes that fit the remaining calorie budget
-  const eligibleRecipes = recipes.filter(
-    (recipe) => recipe.totalCalories <= remainingCalories
+  const eligibleRecipes = recipes.filter((recipe): recipe is CompleteRecipe =>
+    recipe.totalCalories != null
+    && recipe.macros.protein != null
+    && recipe.totalCalories <= remainingCalories
   );
 
   if (eligibleRecipes.length === 0) return null;

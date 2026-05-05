@@ -28,11 +28,11 @@ export const migration_001_user = {
         daily_step_goal           INTEGER DEFAULT 10000,
 
         -- notification settings
-        notif_meal_reminder       INTEGER DEFAULT 1,            -- 0 | 1
-        notif_calorie_alert       INTEGER DEFAULT 1,
-        notif_water_reminder      INTEGER DEFAULT 1,
-        notif_streak_warning      INTEGER DEFAULT 1,
-        notif_weekly_summary      INTEGER DEFAULT 1,
+        notif_meal_reminder       INTEGER DEFAULT 0,            -- 0 | 1
+        notif_calorie_alert       INTEGER DEFAULT 0,
+        notif_water_reminder      INTEGER DEFAULT 0,
+        notif_streak_warning      INTEGER DEFAULT 0,
+        notif_weekly_summary      INTEGER DEFAULT 0,
 
         -- notification times
         breakfast_time            TEXT DEFAULT '08:00',

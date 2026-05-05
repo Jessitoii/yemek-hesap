@@ -131,14 +131,14 @@ export default function RecipesScreen() {
     <View style={styles.container} >
       {renderHeader()}
       {isSearchVisible && (
-        <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.surface }}>
+        <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.headerGradientRecipes[0] }}>
           <TextInput
             autoFocus
             placeholder="Tariflerimde ara..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={{
-              backgroundColor: colors.surfaceAlt,
+              backgroundColor: colors.surface,
               borderRadius: radius.md,
               paddingHorizontal: spacing.md,
               height: 44,
@@ -187,7 +187,7 @@ export default function RecipesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bgRecipes,
   },
   header: {
     flexDirection: 'row',
@@ -195,9 +195,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.headerGradientRecipes[0],
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: colors.primaryLight,
   },
   headerTitle: {
     fontFamily: typography.fontExtraBold,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.bgRecipes,
     justifyContent: 'center',
     alignItems: 'center',
   },

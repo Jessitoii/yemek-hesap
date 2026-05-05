@@ -8,7 +8,6 @@ import { typography } from '@/constants/typography';
 import { FavoriteButton } from './FavoriteButton';
 import { Badge } from '@/components/ui/Badge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 interface RecipeDetailHeaderProps {
   recipe: {
@@ -31,12 +30,12 @@ export function RecipeDetailHeader({ recipe, isComplete = true, completedCount =
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const perServingCalories = recipe.totalCalories ? Math.round(recipe.totalCalories / recipe.servings) : null;
-  const perServingCost = recipe.totalCost ? (recipe.totalCost / recipe.servings).toFixed(2) : null;
+  const perServingCalories = recipe.totalCalories == null ? null : Math.round(recipe.totalCalories / recipe.servings);
+  const perServingCost = recipe.totalCost == null ? null : (recipe.totalCost / recipe.servings).toFixed(2);
 
   const handleShare = async () => {
-    const calStr = recipe.totalCalories ? `${Math.round(recipe.totalCalories)} kcal` : '---';
-    const costStr = recipe.totalCost ? `₺${recipe.totalCost.toFixed(2)}` : '---';
+    const calStr = recipe.totalCalories == null ? '? kcal (bazı malzemeler eksik)' : `${Math.round(recipe.totalCalories)} kcal`;
+    const costStr = recipe.totalCost == null ? '₺?.?? (bazı malzemeler eksik)' : `₺${recipe.totalCost.toFixed(2)}`;
     await Share.share({
       message: `${recipe.name}\n\n🔥 ${calStr} | ${costStr}\n👥 ${recipe.servings} porsiyon\n\nKaloriTabak uygulamasından paylaşıldı.`,
       title: recipe.name,
@@ -96,7 +95,7 @@ export function RecipeDetailHeader({ recipe, isComplete = true, completedCount =
               {recipe.totalCalories !== null ? (
                 <Text style={styles.statVal}>{recipe.totalCalories.toFixed(0)} kcal</Text>
               ) : (
-                <SkeletonRow width={60} height={14} style={{ marginVertical: 2 }} />
+                <Text style={styles.statVal}>? kcal (bazı malzemeler eksik)</Text>
               )}
               <Text style={styles.statLabel}>Toplam Kalori</Text>
             </View>
@@ -108,7 +107,7 @@ export function RecipeDetailHeader({ recipe, isComplete = true, completedCount =
               {recipe.totalCost !== null ? (
                 <Text style={styles.statVal}>₺{recipe.totalCost.toFixed(2)}</Text>
               ) : (
-                <SkeletonRow width={60} height={14} style={{ marginVertical: 2 }} />
+                <Text style={styles.statVal}>₺?.?? (bazı malzemeler eksik)</Text>
               )}
               <Text style={styles.statLabel}>Toplam Maliyet</Text>
             </View>
@@ -146,7 +145,7 @@ export function RecipeDetailHeader({ recipe, isComplete = true, completedCount =
               Porsiyon başı ortalama <Text style={styles.bold}>{perServingCalories} kcal</Text> ve <Text style={styles.bold}>₺{perServingCost}</Text>
             </Text>
           ) : (
-            <SkeletonRow width="80%" height={14} />
+            <Text style={styles.perServingText}>Bazı malzemeler eksik olduğu için toplam tamamlanmadı.</Text>
           )}
         </View>
       </View>

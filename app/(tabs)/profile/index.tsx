@@ -291,12 +291,13 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bgProfile,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.bgProfile,
   },
   scrollContent: {
     padding: 16,
@@ -304,8 +305,14 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 20,
+    backgroundColor: colors.headerGradientProfile[0],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.bordoLight,
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: 24,
+    paddingTop: 32,
+    paddingBottom: 24,
   },
   avatar: {
     marginBottom: 16,

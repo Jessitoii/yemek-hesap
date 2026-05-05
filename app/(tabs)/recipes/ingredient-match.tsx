@@ -37,7 +37,7 @@ export default function IngredientMatchScreen() {
   const [searchQuery, setSearchQuery] = useState(initialQuery as string);
   const [selectedProduct, setSelectedProduct] = useState<MigrosProduct | null>(null);
   const [step, setStep] = useState<'search' | 'quantity'>('search');
-  const [quantityData, setQuantityData] = useState({ amount: 100, unit: 'gram', grams: 100 });
+  const [quantityData, setQuantityData] = useState<{ amount: number; unit: string; grams: number | null }>({ amount: 100, unit: 'gram', grams: 100 });
   const { translate, isLoading: isTranslating } = useTranslate();
   const { getNutrition, isLoading: isNutritionLoading } = useNutrition();
   const { draftingIngredients, appendDraftingIngredient, addIngredient } = useRecipesStore();

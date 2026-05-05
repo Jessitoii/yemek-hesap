@@ -53,6 +53,21 @@ export const colors = {
   border:           '#E0E0E0',
   borderLight:      '#F0F0F0',
 
+  // Tab background tints (body area — 4% opacity of tab accent)
+  bgRecipes:        '#F0F9FF',   // primary blue tint   — Recipes tab
+  bgDaily:          '#F0FFF4',   // secondary green tint — Daily tab
+  bgDiscover:       '#FFFBF0',   // accent orange tint   — Discover tab
+  bgActivity:       '#FFF0F6',   // pink tint            — Activity tab
+  bgProfile:        '#FFF5F5',   // bordo red tint       — Profile tab
+
+  // Tab header gradients (top color → transparent, used with LinearGradient)
+  // Each pair: [gradientStart, gradientEnd]
+  headerGradientRecipes:  ['#DBEEFF', '#F0F9FF'],   // blue
+  headerGradientDaily:    ['#D6F5DC', '#F0FFF4'],   // green
+  headerGradientDiscover: ['#FFF3D6', '#FFFBF0'],   // orange
+  headerGradientActivity: ['#FFD6EC', '#FFF0F6'],   // pink
+  headerGradientProfile:  ['#FFD6D6', '#FFF5F5'],   // red
+
   // Text
   textPrimary:      '#212121',
   textSecondary:    '#757575',
@@ -87,9 +102,14 @@ export const colors = {
 | Errors, over calorie goal, price up | `error` (#EF5350) |
 | Favorites, streak fire | `pink` (#F48FB1) |
 | Delete actions, alerts | `bordo` (#C62828) |
-| Page backgrounds | `background` (#FAFAFA) |
+| Page backgrounds | tab-specific tint (see Tab Background System) |
 | Cards, modals | `surface` (#FFFFFF) |
 | Tab bar, secondary sections | `surfaceAlt` (#F5F5F5) |
+| Recipes tab body | `bgRecipes` (#F0F9FF) |
+| Daily tab body | `bgDaily` (#F0FFF4) |
+| Discover tab body | `bgDiscover` (#FFFBF0) |
+| Activity tab body | `bgActivity` (#FFF0F6) |
+| Profile tab body | `bgProfile` (#FFF5F5) |
 
 ---
 
@@ -281,6 +301,58 @@ Tab colors:
 Active: colored icon + colored label (11px SemiBold) + small dot indicator
 Inactive: textDisabled icon + textDisabled label
 ```
+
+---
+
+## Tab Background System
+
+Each main tab has its own color identity carried through two layers:
+
+### 1. Screen Body Background
+The `ScrollView` / root `View` background uses the tab-specific tint color instead of the generic `#FAFAFA`. The tint is subtle (~4% opacity) so cards and text remain fully readable.
+
+| Tab | Color token | Hex |
+|---|---|---|
+| Recipes | `bgRecipes` | `#F0F9FF` |
+| Daily | `bgDaily` | `#F0FFF4` |
+| Discover | `bgDiscover` | `#FFFBF0` |
+| Activity | `bgActivity` | `#FFF0F6` |
+| Profile | `bgProfile` | `#FFF5F5` |
+
+### 2. Header Gradient
+The top portion of each screen (covering the safe-area + header bar area, roughly 120–140px tall) uses a `LinearGradient` from the tab's gradient start color down to the body tint. This gives an onboarding-style warmth at the top while fading cleanly into the content area.
+
+```typescript
+// Implementation pattern for each screen's root view:
+
+import { LinearGradient } from 'expo-linear-gradient'
+import { colors } from '@/constants/colors'
+
+// Example — Recipes tab
+<View style={{ flex: 1, backgroundColor: colors.bgRecipes }}>
+  <LinearGradient
+    colors={colors.headerGradientRecipes}   // ['#DBEEFF', '#F0F9FF']
+    style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140 }}
+  />
+  {/* screen content */}
+</View>
+```
+
+### Gradient reference
+
+| Tab | Gradient start | Gradient end (= body bg) |
+|---|---|---|
+| Recipes | `#DBEEFF` | `#F0F9FF` |
+| Daily | `#D6F5DC` | `#F0FFF4` |
+| Discover | `#FFF3D6` | `#FFFBF0` |
+| Activity | `#FFD6EC` | `#FFF0F6` |
+| Profile | `#FFD6D6` | `#FFF5F5` |
+
+### Rules
+- Cards (`surface: #FFFFFF`) sit on top of tinted backgrounds — the white creates natural contrast without extra borders.
+- Modal / bottom sheets keep `surface: #FFFFFF` background — they are not tinted.
+- The `surfaceAlt: #F5F5F5` token is retired from full-screen use; use tab-specific `bg*` tokens instead.
+- Sub-screens within a tab (e.g. Recipe Detail, Add Exercise) inherit the same tint + gradient as their parent tab.
 
 ---
 

@@ -39,6 +39,7 @@ import { MealType } from '@/types/daily';
 import { Recipe } from '@/types/recipe';
 import { MigrosProduct } from '@/types/ingredient';
 import { toGrams, parseProductGrams } from '@/utils/unitConverter';
+import { calcCostTL } from '@/utils/priceCalc';
 import { extractIngredientName } from '@/utils/formatters';
 
 type Tab = 'recipes' | 'search';
@@ -60,7 +61,12 @@ export default function AddMealScreen() {
   // Selected item state
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<MigrosProduct | null>(null);
-  const [productNutrition, setProductNutrition] = useState<any>(null);
+  const [productNutrition, setProductNutrition] = useState<{
+    calories: number;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
+  } | null>(null);
   const [amount, setAmount] = useState('1');
   const [unit, setUnit] = useState('gram');
   const [parsingWarning, setParsingWarning] = useState<string | null>(null);
@@ -88,8 +94,8 @@ export default function AddMealScreen() {
 
     // Parse net grams from name
     const netGrams = parseProductGrams(product.name);
-    if (netGrams === 100 && !product.name.toLowerCase().includes('100')) {
-      setParsingWarning("Ambalaj miktarı otomatik okunamadı, 100g varsayıldı.");
+    if (netGrams == null) {
+      setParsingWarning('Ambalaj miktarı otomatik okunamadı. Ürün gramajını onaylayınca maliyet hesaplanır.');
     } else {
       setParsingWarning(null);
     }
@@ -115,40 +121,37 @@ export default function AddMealScreen() {
 
     if (selectedRecipe) {
       return {
-        calories: selectedRecipe.totalCalories * (numAmount / selectedRecipe.servings),
-        cost: selectedRecipe.totalCost * (numAmount / selectedRecipe.servings),
+        calories: selectedRecipe.totalCalories == null ? null : selectedRecipe.totalCalories * (numAmount / selectedRecipe.servings),
+        cost: selectedRecipe.totalCost == null ? null : selectedRecipe.totalCost * (numAmount / selectedRecipe.servings),
         grams: 0, // Not explicitly used for recipes here
       };
     }
 
     if (selectedProduct) {
-      const productNetWeight = parseProductGrams(selectedProduct.name)
-      const amountInGrams = toGrams(numAmount, unit, selectedProduct.name, productNetWeight)
-        ?? (unit === 'gram' || unit === 'ml' ? numAmount
-          : unit === 'litre' ? numAmount * 1000
-            : unit === 'adet' ? productNetWeight * numAmount
-              : unit === 'bardak' ? numAmount * 200
-                : unit === 'yemek kaşığı' ? numAmount * 15
-                  : unit === 'çay kaşığı' ? numAmount * 5
-                    : unit === 'dilim' ? numAmount * 30
-                      : unit === 'avuç' ? numAmount * 30
-                        : 100)
+      const productNetWeight = parseProductGrams(selectedProduct.name);
+      const amountInGrams = toGrams(numAmount, unit, selectedProduct.name, productNetWeight);
 
       const calories = productNutrition
-        ? (productNutrition.calories / 100) * amountInGrams
-        : 0
-      const cost = (selectedProduct.price / productNetWeight) * amountInGrams;
+        && amountInGrams != null ? (productNutrition.calories / 100) * amountInGrams : null;
+      const cost = calcCostTL(selectedProduct.price, productNetWeight, amountInGrams);
 
       return { calories, cost, grams: amountInGrams };
     }
 
-    return { calories: 0, cost: 0, grams: 0 };
+    return { calories: null, cost: null, grams: null };
   }, [selectedRecipe, selectedProduct, productNutrition, amount, unit]);
 
   const handleAdd = async () => {
     const numAmount = parseFloat(amount.replace(',', '.')) || 1;
 
     if (selectedRecipe) {
+      if (
+        calculatePreview.calories == null
+        || calculatePreview.cost == null
+        || selectedRecipe.macros.protein == null
+        || selectedRecipe.macros.carbs == null
+        || selectedRecipe.macros.fat == null
+      ) return;
       await addMeal({
         recipeId: selectedRecipe.id,
         name: selectedRecipe.name,
@@ -168,6 +171,7 @@ export default function AddMealScreen() {
       router.back();
     } else if (selectedProduct) {
       const g = calculatePreview.grams;
+      if (g == null || calculatePreview.calories == null || calculatePreview.cost == null) return;
       await addMeal({
         name: selectedProduct.name,
         imageUrl: selectedProduct.imageUrl || undefined,
@@ -178,9 +182,9 @@ export default function AddMealScreen() {
         calories: calculatePreview.calories,
         cost: calculatePreview.cost,
         macros: {
-          protein: (productNutrition?.protein || 0) * (g / 100),
-          carbs: (productNutrition?.carbs || 0) * (g / 100),
-          fat: (productNutrition?.fat || 0) * (g / 100),
+          protein: (productNutrition?.protein ?? 0) * (g / 100),
+          carbs: (productNutrition?.carbs ?? 0) * (g / 100),
+          fat: (productNutrition?.fat ?? 0) * (g / 100),
         }
       });
       router.back();
@@ -198,7 +202,9 @@ export default function AddMealScreen() {
       <Image source={{ uri: item.imageUrl }} style={styles.listImage} />
       <View style={styles.listInfo}>
         <Text style={styles.listTitle} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.listSub}>{Math.round(item.totalCalories)} kcal | ₺{item.totalCost.toFixed(2)}</Text>
+        <Text style={styles.listSub}>
+          {item.totalCalories == null ? '? kcal' : `${Math.round(item.totalCalories)} kcal`} | {item.totalCost == null ? '₺?.??' : `₺${item.totalCost.toFixed(2)}`}
+        </Text>
       </View>
       {selectedRecipe?.id === item.id && (
         <CheckCircle size={24} color={colors.primary} weight="fill" />
@@ -360,11 +366,11 @@ export default function AddMealScreen() {
 
           <View style={styles.previewStats}>
             <View style={styles.stat}>
-              <Text style={styles.statVal}>≈ {Math.round(calculatePreview.calories)}</Text>
+              <Text style={styles.statVal}>{calculatePreview.calories != null ? `≈ ${Math.round(calculatePreview.calories)}` : '?'}</Text>
               <Text style={styles.statLabel}>kcal</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statVal}>≈ ₺{calculatePreview.cost.toFixed(2)}</Text>
+              <Text style={styles.statVal}>{calculatePreview.cost != null ? `≈ ₺${calculatePreview.cost.toFixed(2)}` : '₺?.??'}</Text>
               <Text style={styles.statLabel}>maliyet</Text>
             </View>
           </View>
@@ -374,6 +380,7 @@ export default function AddMealScreen() {
             onPress={handleAdd}
             fullWidth
             loading={isNutritionLoading}
+            disabled={calculatePreview.calories == null || calculatePreview.cost == null}
           />
         </View>
       )}

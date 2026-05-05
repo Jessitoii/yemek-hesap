@@ -55,14 +55,15 @@ export default function RecipeDetailScreen() {
 
   // Performance Fix: Only calculate if it's a TheMealDB recipe AND has no calories/cost yet, 
   // or if the user explicitly triggered a price update.
-  const shouldCalculate = recipe?.source === 'TheMealDB' && (isUpdatingPrices || !recipe.totalCalories || recipe.totalCalories === 0);
+  const shouldCalculate = recipe?.source === 'TheMealDB' && (isUpdatingPrices || recipe.totalCalories == null || recipe.totalCalories === 0);
 
   const calc = useRecipeCalculation(
     shouldCalculate ? recipe?.name || '' : '',
     shouldCalculate ? recipe?.ingredients?.map(i => ({ 
       nameEn: i.name, 
       measure: `${i.amount} ${i.unit}` 
-    })) || [] : []
+    })) || [] : [],
+    shouldCalculate ? recipe?.id || '' : ''
   );
 
   useEffect(() => {
@@ -77,12 +78,12 @@ export default function RecipeDetailScreen() {
     if (calc.isComplete && addedMealId) {
       const { updateMeal } = useDailyStore.getState();
       updateMeal(addedMealId, {
-        calories: calc.totalCalories || 0,
-        cost: calc.totalCost || 0,
+        calories: calc.totalCalories ?? 0,
+        cost: calc.totalCost ?? 0,
         macros: {
-          protein: calc.totalProtein || 0,
-          carbs: calc.totalCarbs || 0,
-          fat: calc.totalFat || 0
+          protein: calc.totalProtein ?? 0,
+          carbs: calc.totalCarbs ?? 0,
+          fat: calc.totalFat ?? 0
         }
       }).then(() => {
         setAddedMealId(null);
@@ -132,9 +133,9 @@ export default function RecipeDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Makro Dağılımı</Text>
             <MacroBar
-              protein={recipe.macros.protein}
-              carbs={recipe.macros.carbs}
-              fat={recipe.macros.fat}
+              protein={recipe.macros.protein ?? 0}
+              carbs={recipe.macros.carbs ?? 0}
+              fat={recipe.macros.fat ?? 0}
             />
           </View>
 
@@ -161,7 +162,7 @@ export default function RecipeDetailScreen() {
             <View style={styles.ingredientsList}>
               {recipe.ingredients.map((ing, idx) => (
                 <IngredientRow
-                  key={ing.ingredientId}
+                  key={ing.id || `${idx}-${ing.name}`}
                   ingredient={ing}
                   calcState={recipe.source === 'TheMealDB' ? calc.ingredients[idx] : undefined}
                   onPress={() => router.push({
@@ -182,7 +183,7 @@ export default function RecipeDetailScreen() {
           <View style={styles.section}>
             <PriceHistory
               history={[
-                { date: new Date().toISOString(), price: recipe.totalCost }
+                ...(recipe.totalCost == null ? [] : [{ date: new Date().toISOString(), price: recipe.totalCost }])
               ]}
             />
 
@@ -233,8 +234,12 @@ export default function RecipeDetailScreen() {
           style={styles.addBtn}
           leftIcon={<Plus size={20} color="white" weight="bold" />}
           onPress={async () => {
-             const calories = shouldCalculate ? (calc.totalCalories || 0) : recipe.totalCalories;
-             const cost = shouldCalculate ? (calc.totalCost || 0) : recipe.totalCost;
+             const calories = shouldCalculate ? calc.totalCalories : recipe.totalCalories;
+             const cost = shouldCalculate ? calc.totalCost : recipe.totalCost;
+             if (calories == null || cost == null) {
+               Alert.alert('Eksik Bilgi', 'Bazı malzemeler eksik olduğu için bu tarif günlük kaydına eklenemiyor.');
+               return;
+             }
              
              const mealId = await addMeal({
                type: MealType.LUNCH,
@@ -247,9 +252,9 @@ export default function RecipeDetailScreen() {
                calories,
                cost,
                macros: {
-                 protein: recipe.macros.protein,
-                 carbs: recipe.macros.carbs,
-                 fat: recipe.macros.fat
+                 protein: recipe.macros.protein ?? 0,
+                 carbs: recipe.macros.carbs ?? 0,
+                 fat: recipe.macros.fat ?? 0
                }
              });
              

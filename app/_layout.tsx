@@ -12,6 +12,7 @@ import {
   Nunito_700Bold,
   Nunito_800ExtraBold
 } from "@expo-google-fonts/nunito";
+import { Platform } from 'react-native';
 import { getDB, initDB } from "../db";
 import { clearCalorieCache } from "@/db/queries/cache";
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -19,16 +20,13 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 const Notifications = isExpoGo ? null : require('expo-notifications');
 
-if (!isExpoGo && Notifications) {
+if (!isExpoGo && Notifications && Platform.OS === 'android') {
   try {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'Varsayılan',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#4FC3F7',
     });
   } catch (error) {
     console.debug('[RootLayout] Notifications not supported in this environment');

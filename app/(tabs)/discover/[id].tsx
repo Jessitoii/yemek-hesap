@@ -85,7 +85,8 @@ export default function DiscoverRecipeDetailScreen() {
   // Step 2: Background Calculation (Layer 2)
   const calc = useRecipeCalculation(
     recipe?.name || '',
-    recipe?.ingredients || []
+    recipe?.ingredients || [],
+    recipe?.id || ''
   );
 
   const handleAddToMyRecipes = async () => {
@@ -105,10 +106,10 @@ export default function DiscoverRecipeDetailScreen() {
           migrosProductId: ingState.migrosProduct?.id,
           lastKnownPrice: ingState.migrosProduct?.price || 0,
           nutrition: {
-            calories: (ingState.calories || 0) * (100 / (ingState.grams || 100)) || 0,
-            protein: (ingState.protein || 0) * (100 / (ingState.grams || 100)) || 0,
-            carbs: (ingState.carbs || 0) * (100 / (ingState.grams || 100)) || 0,
-            fat: (ingState.fat || 0) * (100 / (ingState.grams || 100)) || 0,
+            calories: ingState.calories != null && ingState.grams != null ? ingState.calories * (100 / ingState.grams) : 0,
+            protein: ingState.protein != null && ingState.grams != null ? ingState.protein * (100 / ingState.grams) : 0,
+            carbs: ingState.carbs != null && ingState.grams != null ? ingState.carbs * (100 / ingState.grams) : 0,
+            fat: ingState.fat != null && ingState.grams != null ? ingState.fat * (100 / ingState.grams) : 0,
             servingSize: 100,
             unit: 'g'
           },
@@ -123,7 +124,7 @@ export default function DiscoverRecipeDetailScreen() {
           name: ingState.nameTr || ingState.nameEn || 'Malzeme',
           amount: ingState.amount || 0,
           unit: ingState.unit || '',
-          grams: ingState.grams || 0,
+          grams: ingState.grams,
         });
       }
 
@@ -135,12 +136,12 @@ export default function DiscoverRecipeDetailScreen() {
         ingredients: draftingIngredients,
         instructions: instructionsTr || recipe.instructions,
         source: 'TheMealDB',
-        totalCalories: calc.totalCalories || 0,
-        totalCost: calc.totalCost || 0,
+        totalCalories: calc.totalCalories,
+        totalCost: calc.totalCost,
         macros: {
-          protein: calc.totalProtein || 0,
-          carbs: calc.totalCarbs || 0,
-          fat: calc.totalFat || 0
+          protein: calc.totalProtein,
+          carbs: calc.totalCarbs,
+          fat: calc.totalFat
         },
         isFavorite: false,
         createdAt: new Date(),
@@ -161,10 +162,9 @@ export default function DiscoverRecipeDetailScreen() {
   const handleAddToLog = async () => {
     if (!recipe) return;
     
-    // If not complete, warning toast
-    if (!calc.isComplete) {
-      // Toast logic would go here if we had a toast provider
-      // For now, let's just proceed with partial values
+    if (calc.totalCalories == null || calc.totalCost == null) {
+      Alert.alert('Eksik Bilgi', 'Bazı malzemeler eksik olduğu için bu tarif günlük kaydına eklenemiyor.');
+      return;
     }
 
     try {
@@ -176,12 +176,12 @@ export default function DiscoverRecipeDetailScreen() {
         amount: 1,
         unit: 'porsiyon',
         grams: calc.ingredients.reduce((acc, i) => acc + (i.grams || 0), 0),
-        calories: calc.totalCalories || 0,
-        cost: calc.totalCost || 0,
+        calories: calc.totalCalories,
+        cost: calc.totalCost,
         macros: {
-          protein: calc.totalProtein || 0,
-          carbs: calc.totalCarbs || 0,
-          fat: calc.totalFat || 0
+          protein: calc.totalProtein ?? 0,
+          carbs: calc.totalCarbs ?? 0,
+          fat: calc.totalFat ?? 0
         }
       });
 
@@ -203,12 +203,12 @@ export default function DiscoverRecipeDetailScreen() {
     if (calc.isComplete && addedMealId) {
       const { updateMeal } = useDailyStore.getState();
       updateMeal(addedMealId, {
-        calories: calc.totalCalories || 0,
-        cost: calc.totalCost || 0,
+        calories: calc.totalCalories ?? 0,
+        cost: calc.totalCost ?? 0,
         macros: {
-          protein: calc.totalProtein || 0,
-          carbs: calc.totalCarbs || 0,
-          fat: calc.totalFat || 0
+          protein: calc.totalProtein ?? 0,
+          carbs: calc.totalCarbs ?? 0,
+          fat: calc.totalFat ?? 0
         }
       }).then(() => {
         setAddedMealId(null); // Update complete, clear local ref
@@ -273,12 +273,12 @@ export default function DiscoverRecipeDetailScreen() {
             <View style={styles.ingredientList}>
               {calc.ingredients.map((ingState, idx) => (
                 <IngredientRow 
-                  key={idx} 
+                  key={`${idx}-${ingState.nameEn}`}
                   ingredient={{
                     name: ingState.nameTr || ingState.nameEn,
                     amount: ingState.amount?.toString() || '',
                     unit: ingState.unit || '',
-                    grams: ingState.grams || 0
+                    grams: ingState.grams
                   }}
                   calcState={ingState}
                 />

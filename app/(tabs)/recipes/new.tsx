@@ -32,9 +32,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRecipesStore } from '@/stores/recipesStore';
 import { useTranslate } from '@/hooks/useTranslate';
 import { useNutrition } from '@/hooks/useNutrition';
-import { searchMigrosProducts } from '@/services/migros';
+import { scoreMigrosMatch, searchMigrosProducts, shouldExcludeLiquidIngredientProduct } from '@/services/migros';
 import { extractIngredientName } from '@/utils/formatters';
-import { parseMeasure, toGrams, parseProductGrams } from '@/utils/unitConverter';
+import { parseMeasure, toGrams } from '@/utils/unitConverter';
 import { searchRecipes } from '@/services/themealdb';
 import { RecipeCard } from '@/components/recipes/RecipeCard';
 import { Input } from '@/components/ui/Input';
@@ -43,38 +43,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { colors } from '@/constants/colors';
 import { spacing, radius, shadow } from '@/constants/theme';
 import { typography } from '@/constants/typography';
-import { RecipeIngredient } from '@/types/recipe';
 import { Card } from '@/components/ui/Card';
-
-const scoreMigrosMatch = (product: any, query: string, unit: string, amount: number) => {
-  let score = 0;
-  const productName = product.name.toLowerCase();
-  const q = query.toLowerCase();
-
-  // 1. İsim Benzerliği
-  if (productName === q) score += 100;
-  else if (productName.includes(q)) score += 50;
-
-  // 2. Birim Uyumu
-  const targetUnitLower = (unit || '').toLowerCase();
-  if (targetUnitLower === 'gram' || targetUnitLower === 'gr' || targetUnitLower === 'kg') {
-    if (productName.includes(' g') || productName.includes(' gr') || productName.includes('kg')) {
-      score += 30;
-    }
-  } else if (targetUnitLower === 'adet' || targetUnitLower === 'tane') {
-    if (productName.includes(' adet') || productName.includes(' tane')) {
-      score += 30;
-    }
-  }
-
-  // 3. Kelime bazlı eşleşme
-  const keywords = q.split(' ');
-  keywords.forEach(kw => {
-    if (kw.length > 2 && productName.includes(kw)) score += 20;
-  });
-
-  return score;
-};
 
 export default function NewRecipeScreen() {
   const router = useRouter();
@@ -130,15 +99,24 @@ export default function NewRecipeScreen() {
     return draftingIngredients.reduce((acc, ing) => {
       const detail = allIngredients.find(i => i.id === ing.ingredientId);
       if (detail) {
+        if (ing.grams == null) {
+          acc.caloriesComplete = false;
+          acc.costComplete = false;
+          return acc;
+        }
         const ratio = ing.grams / 100;
         acc.calories += (detail.nutrition?.calories || 0) * ratio;
         acc.protein += (detail.nutrition?.protein || 0) * ratio;
         acc.carbs += (detail.nutrition?.carbs || 0) * ratio;
         acc.fat += (detail.nutrition?.fat || 0) * ratio;
-        acc.cost += (detail.lastKnownPrice || 0) * (ing.grams / (detail.nutrition?.servingSize || 100));
+        if (detail.lastKnownPrice == null) {
+          acc.costComplete = false;
+        } else {
+          acc.cost += detail.lastKnownPrice * (ing.grams / (detail.nutrition?.servingSize || 100));
+        }
       }
       return acc;
-    }, { calories: 0, protein: 0, carbs: 0, fat: 0, cost: 0 });
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0, cost: 0, caloriesComplete: true, costComplete: true });
   }, [draftingIngredients, allIngredients]);
 
   const handlePickImage = async () => {
@@ -230,10 +208,12 @@ export default function NewRecipeScreen() {
 
         // 2. Search Migros for cost/image
         const { amount, unit } = parseMeasure(raw.measure);
-        const migrosMatches = await searchMigrosProducts(nameToSearch);
+        const usedGrams = toGrams(amount, unit, raw.nameEn);
+        const migrosMatches = (await searchMigrosProducts(nameToSearch))
+          .filter(product => !shouldExcludeLiquidIngredientProduct(product, raw.nameEn, unit));
         
         const scored = migrosMatches
-          .map(p => ({ product: p, score: scoreMigrosMatch(p, nameToSearch, unit, amount) }))
+          .map(p => ({ product: p, score: scoreMigrosMatch(p, nameToSearch, unit, amount, usedGrams) }))
           .sort((a, b) => b.score - a.score);
         
         const bestMatch = scored.length > 0 && scored[0].score > 0 ? scored[0].product : undefined;
@@ -266,14 +246,10 @@ export default function NewRecipeScreen() {
         });
 
         // 5. Convert to grams
-        const productGrams = bestMatch ? parseProductGrams(bestMatch.name) : undefined;
-        const isKgProduct = bestMatch?.name?.toLowerCase().includes(' kg') ||
-          bestMatch?.name?.toLowerCase().endsWith('kg');
-        const gramsCount = toGrams(
+        const gramsCount = usedGrams ?? toGrams(
           amount,
           unit,
-          bestMatch?.name || nameToSearch,
-          isKgProduct ? undefined : productGrams
+          bestMatch?.name || nameToSearch
         );
 
         const newIngredient = {
@@ -302,8 +278,8 @@ export default function NewRecipeScreen() {
     router.push(`/(tabs)/recipes/ingredient-match`);
   };
 
-  const handleRemoveIngredient = (ingId: string) => {
-    setDraftingIngredients(draftingIngredients.filter(i => i.ingredientId !== ingId));
+  const handleRemoveIngredient = (recipeIngredientId: string) => {
+    setDraftingIngredients(draftingIngredients.filter(i => i.id !== recipeIngredientId));
   };
 
 
@@ -317,15 +293,24 @@ export default function NewRecipeScreen() {
     const totals = draftingIngredients.reduce((acc, ing) => {
       const detail = allIngredients.find(i => i.id === ing.ingredientId);
       if (detail) {
+        if (ing.grams == null) {
+          acc.caloriesComplete = false;
+          acc.costComplete = false;
+          return acc;
+        }
         const ratio = ing.grams / 100;
         acc.protein += (detail.nutrition?.protein || 0) * ratio;
         acc.carbs += (detail.nutrition?.carbs || 0) * ratio;
         acc.fat += (detail.nutrition?.fat || 0) * ratio;
         acc.calories += (detail.nutrition?.calories || 0) * ratio;
-        acc.cost += (detail.lastKnownPrice || 0) * (ing.grams / (detail.nutrition?.servingSize || 100));
+        if (detail.lastKnownPrice == null) {
+          acc.costComplete = false;
+        } else {
+          acc.cost += detail.lastKnownPrice * (ing.grams / (detail.nutrition?.servingSize || 100));
+        }
       }
       return acc;
-    }, { protein: 0, carbs: 0, fat: 0, calories: 0, cost: 0 });
+    }, { protein: 0, carbs: 0, fat: 0, calories: 0, cost: 0, caloriesComplete: true, costComplete: true });
 
     const recipePayload: any = {
       id: (id as string) || Math.random().toString(36).substr(2, 9),
@@ -336,12 +321,12 @@ export default function NewRecipeScreen() {
       instructions,
       source: recipeSource,
       isFavorite: false,
-      totalCalories: totals.calories,
-      totalCost: totals.cost,
+      totalCalories: totals.caloriesComplete ? totals.calories : null,
+      totalCost: totals.costComplete ? totals.cost : null,
       macros: {
-        protein: totals.protein,
-        carbs: totals.carbs,
-        fat: totals.fat
+        protein: totals.caloriesComplete ? totals.protein : null,
+        carbs: totals.caloriesComplete ? totals.carbs : null,
+        fat: totals.caloriesComplete ? totals.fat : null
       },
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -464,7 +449,7 @@ export default function NewRecipeScreen() {
 
             {draftingIngredients.length > 0 ? (
               <View style={styles.ingredientsList}>
-                {draftingIngredients.map((ing) => {
+                {draftingIngredients.map((ing, index) => {
                   const detail = allIngredients.find(i => i.id === ing.ingredientId);
                   const imageUrl = detail?.imageUrl;
                   const finalUri = imageUrl 
@@ -472,7 +457,7 @@ export default function NewRecipeScreen() {
                     : null;
 
                   return (
-                    <View key={ing.ingredientId} style={styles.ingredientItem}>
+                    <View key={ing.id || `${index}-${ing.name}`} style={styles.ingredientItem}>
                       <View style={styles.ingredientInfo}>
                         <View style={styles.ingredientImageBox}>
                           {finalUri ? (
@@ -486,7 +471,7 @@ export default function NewRecipeScreen() {
                           <Text style={styles.ingredientAmount}>{ing.amount} {ing.unit}</Text>
                         </View>
                       </View>
-                      <TouchableOpacity onPress={() => handleRemoveIngredient(ing.ingredientId)} style={{ marginLeft: 10 }}>
+                      <TouchableOpacity onPress={() => handleRemoveIngredient(ing.id)} style={{ marginLeft: 10 }}>
                         <Trash size={20} color={colors.error} weight="bold" />
                       </TouchableOpacity>
                     </View>
@@ -506,8 +491,8 @@ export default function NewRecipeScreen() {
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryTitle}>Tarif Özeti (Toplam)</Text>
                 <View style={styles.summaryStats}>
-                  <Text style={styles.summaryStatText}>🔥 {Math.round(summary.calories)} kcal</Text>
-                  <Text style={styles.summaryStatText}>💰 {summary.cost.toFixed(2)} TL</Text>
+                  <Text style={styles.summaryStatText}>🔥 {summary.caloriesComplete ? `${Math.round(summary.calories)} kcal` : '? kcal (bazı malzemeler eksik)'}</Text>
+                  <Text style={styles.summaryStatText}>💰 {summary.costComplete ? `${summary.cost.toFixed(2)} TL` : '₺?.?? (bazı malzemeler eksik)'}</Text>
                   <Text style={styles.summaryStatText}>💪 {summary.protein.toFixed(1)}g protein</Text>
                 </View>
               </View>
@@ -846,5 +831,3 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 });
-
-

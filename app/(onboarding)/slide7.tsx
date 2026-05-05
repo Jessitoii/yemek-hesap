@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Sparkle, Check } from 'phosphor-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { getDB } from '@/db';
+import { AppSettings } from '@/types/user';
 
 export default function Slide7Ready() {
   const { data } = useOnboarding();
@@ -31,6 +32,29 @@ export default function Slide7Ready() {
   const handleStart = async () => {
     try {
       const db = await getDB()
+      const defaultSettings: AppSettings = {
+        notificationsEnabled: true,
+        notif_meal_reminder: true,
+        notif_calorie_alert: true,
+        notif_water_reminder: true,
+        notif_streak_warning: true,
+        notif_weekly_summary: true,
+        breakfast_time: '08:00',
+        lunch_time: '12:30',
+        dinner_time: '19:00',
+        water_interval_hours: 2,
+        water_start_time: '08:00',
+        water_end_time: '22:00',
+        weekly_summary_day: 'sunday',
+        dataRetentionMonths: 12,
+        healthConnected: false,
+        mealReminderTimes: {
+          breakfast: '08:00',
+          lunch: '12:30',
+          dinner: '19:00',
+          snack: '16:00',
+        },
+      };
 
       // Önce kayıt var mı kontrol et
       const existing = await db.getFirstAsync('SELECT id FROM user WHERE id = 1')
@@ -66,6 +90,23 @@ export default function Slide7Ready() {
 
       // Store'u güncelle
       useUserStore.setState({ onboardingCompleted: true })
+
+      const { requestPermission, rescheduleAllNotifications } = await import('@/hooks/useNotifications');
+      const hasNotificationPermission = await requestPermission();
+      if (hasNotificationPermission) {
+        await db.runAsync(`
+          UPDATE user SET
+            notif_meal_reminder = 1,
+            notif_calorie_alert = 1,
+            notif_water_reminder = 1,
+            notif_streak_warning = 1,
+            notif_weekly_summary = 1,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = 1
+        `);
+        useUserStore.setState({ settings: defaultSettings });
+        await rescheduleAllNotifications(defaultSettings);
+      }
 
       router.replace("/(tabs)/daily/")
     } catch (error) {

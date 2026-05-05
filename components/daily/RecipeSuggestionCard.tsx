@@ -35,6 +35,9 @@ export const RecipeSuggestionCard: React.FC<RecipeSuggestionCardProps> = ({
 
   if (!recipe) return null;
 
+  const caloriesText = recipe.totalCalories == null ? '? kcal' : `${Math.round(recipe.totalCalories)} kcal`;
+  const costText = recipe.totalCost == null ? '₺?.??' : `₺${recipe.totalCost.toFixed(2)}`;
+
   return (
     <Card style={styles.card}>
       <Text style={styles.sectionTitle}>Günün Önerisi</Text>
@@ -51,7 +54,7 @@ export const RecipeSuggestionCard: React.FC<RecipeSuggestionCardProps> = ({
             {recipe.name}
           </Text>
           <Text style={styles.recipeStats}>
-            {Math.round(recipe.totalCalories)} kcal | ₺{recipe.totalCost.toFixed(2)}
+            {caloriesText} | {costText}
           </Text>
         </View>
       </View>

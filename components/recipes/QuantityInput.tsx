@@ -13,7 +13,7 @@ interface QuantityInputProps {
   nutrition: NutritionData;
   initialAmount?: string;
   initialUnit?: string;
-  onQuantityChange: (amount: number, unit: string, grams: number) => void;
+  onQuantityChange: (amount: number, unit: string, grams: number | null) => void;
   pricePerUnit?: number; // Price per servingSize (usually 100g)
 }
 
@@ -41,18 +41,18 @@ export function QuantityInput({
 
   const calculatedGrams = useMemo(() => {
     const numAmount = parseFloat(amount.replace(',', '.'));
-    if (isNaN(numAmount)) return 0;
-    return toGrams(numAmount, unit, ingredientName) || numAmount;
+    if (isNaN(numAmount)) return null;
+    return toGrams(numAmount, unit, ingredientName);
   }, [amount, unit, ingredientName]);
 
   const calories = useMemo(() => {
     // nutrition.calories is per 100g usually
-    return Math.round((nutrition.calories * calculatedGrams) / 100);
+    return calculatedGrams != null ? Math.round((nutrition.calories * calculatedGrams) / 100) : null;
   }, [nutrition.calories, calculatedGrams]);
 
   const cost = useMemo(() => {
     // pricePerUnit is per servingSize (usually 100g)
-    return ((pricePerUnit * calculatedGrams) / (nutrition.servingSize || 100)).toFixed(2);
+    return calculatedGrams != null ? ((pricePerUnit * calculatedGrams) / (nutrition.servingSize || 100)).toFixed(2) : null;
   }, [pricePerUnit, calculatedGrams, nutrition.servingSize]);
 
   useEffect(() => {
@@ -103,17 +103,17 @@ export function QuantityInput({
       <View style={styles.previewContainer}>
         <View style={styles.previewItem}>
           <Text style={styles.previewLabel}>Gramaj</Text>
-          <Text style={styles.previewValue}>≈ {Math.round(calculatedGrams)} g</Text>
+          <Text style={styles.previewValue}>{calculatedGrams != null ? `≈ ${Math.round(calculatedGrams)} g` : '?'}</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.previewItem}>
           <Text style={styles.previewLabel}>Kalori</Text>
-          <Text style={styles.previewValue}>≈ {calories} kcal</Text>
+          <Text style={styles.previewValue}>{calories != null ? `≈ ${calories} kcal` : '?'}</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.previewItem}>
           <Text style={styles.previewLabel}>Maliyet</Text>
-          <Text style={styles.previewValue}>≈ ₺{cost}</Text>
+          <Text style={styles.previewValue}>{cost != null ? `≈ ₺${cost}` : '₺?.??'}</Text>
         </View>
       </View>
     </Card>

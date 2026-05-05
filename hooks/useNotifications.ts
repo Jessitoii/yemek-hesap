@@ -3,18 +3,12 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 const Notifications = isExpoGo ? null : require('expo-notifications');
-const SchedulableTriggerInputTypes = isExpoGo
-  ? {}
-  : require('expo-notifications').SchedulableTriggerInputTypes;
-
 if (!isExpoGo && Notifications) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
       shouldPlaySound: true,
       shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
     }),
   });
 }
@@ -101,9 +95,10 @@ export async function scheduleMealReminders(settings: AppSettings) {
         content: {
           title: getMealTitle(meal.type),
           body: getMealBody(meal.type),
+          data: {},
+          channelId: 'default',
         },
         trigger: {
-          type: SchedulableTriggerInputTypes.CALENDAR,
           hour,
           minute,
           repeats: true,
@@ -144,10 +139,11 @@ export async function scheduleWaterReminders(settings: AppSettings) {
         content: {
           title: '💧 Su içme vakti!',
           body: 'Metabolizman için bir bardak su iç!',
+          data: {},
+          channelId: 'default',
         },
 
         trigger: {
-          type: SchedulableTriggerInputTypes.CALENDAR,
           hour: current,
           minute: 0,
           repeats: true,
@@ -178,10 +174,11 @@ export async function scheduleStreakWarning(settings: AppSettings) {
       content: {
         title: "🔥 Serini kırma!",
         body: "Bugünkü hedefini henüz tamamlamadın.",
+        data: {},
+        channelId: 'default',
       },
 
       trigger: {
-        type: SchedulableTriggerInputTypes.CALENDAR,
         hour: 21,
         minute: 0,
         repeats: true,
@@ -213,10 +210,11 @@ export async function scheduleWeeklySummary(settings: AppSettings) {
       content: {
         title: '📊 Haftalık özetin hazır',
         body: 'Bu haftaya bir göz at!',
+        data: {},
+        channelId: 'default',
       },
 
       trigger: {
-        type: SchedulableTriggerInputTypes.CALENDAR,
         weekday,
         hour: 20,
         minute: 0,
@@ -250,6 +248,8 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
         content: {
           title: '🎉 Hedefe ulaştın!',
           body: "Günlük kalori hedefine ulaştın!",
+          data: {},
+          channelId: 'default',
         },
         trigger: null,
       });
@@ -262,6 +262,8 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
         content: {
           title: '⚠️ Kalori hedefi aşıldı',
           body: "Günlük limitini geçtin.",
+          data: {},
+          channelId: 'default',
         },
         trigger: null,
       });
@@ -275,6 +277,8 @@ export async function triggerCalorieAlert(consumed: number, goal: number) {
         content: {
           title: '🎯 Neredeyse ulaştın!',
           body: `${remaining} kcal daha kaldı.`,
+          data: {},
+          channelId: 'default',
         },
         trigger: null,
       });
@@ -314,6 +318,7 @@ export async function triggerRecipeCalculatedNotification({
         title: `✅ "${recipeName}" hesaplandı`,
         body: `${calStr} · ${costStr} — Detaylar için dokunun.`,
         data: { recipeName, recipeId },
+        channelId: 'default',
       },
       trigger: null,
     });
@@ -349,6 +354,8 @@ export async function scheduleAll(settings: AppSettings) {
   }
 }
 
+export const rescheduleAllNotifications = scheduleAll;
+
 export function useNotifications() {
   if (isExpoGo) {
     console.warn('[Notifications] Notifications are not supported in Expo Go. Please use a development build.');
@@ -361,6 +368,7 @@ export function useNotifications() {
       triggerCalorieAlert: async () => { },
       triggerRecipeCalculatedNotification: async () => { },
       scheduleAll: async () => { },
+      rescheduleAllNotifications: async () => { },
       cancelAll: async () => { },
     };
   }
@@ -373,6 +381,7 @@ export function useNotifications() {
     triggerCalorieAlert,
     triggerRecipeCalculatedNotification,
     scheduleAll,
+    rescheduleAllNotifications,
     cancelAll,
   };
 }
